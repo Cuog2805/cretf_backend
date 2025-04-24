@@ -4,9 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -16,6 +14,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.Date;
 
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @MappedSuperclass
@@ -24,24 +24,24 @@ public class AuditingCreateEntity {
     @CreatedBy
     @Column(name = "Creator")
     @JsonIgnore
-    private String Creator;
+    private String creator;
 
     @CreatedDate
     @Column(name = "DateCreated")
     @JsonIgnore
-    private Date DateCreated = new Date(System.currentTimeMillis());
+    private Date dateCreated = new Date(System.currentTimeMillis());
 
     @LastModifiedBy
     @Column(name = "Modifier")
     @JsonIgnore
-    private String Modifier;
+    private String modifier;
 
     @LastModifiedDate
     @Column(name = "DateModified")
     @JsonIgnore
-    private Date DateModified = new Date(System.currentTimeMillis());
+    private Date dateModified = new Date(System.currentTimeMillis());
 
     @Column(name = "IsDeleted")
     @JsonIgnore
-    private int IsDeleted;
+    private int isDeleted;
 }

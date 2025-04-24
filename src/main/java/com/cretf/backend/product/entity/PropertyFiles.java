@@ -7,43 +7,26 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.util.Date;
 import java.util.List;
 
 @Entity
-@Table(name = "Property")
+@Table(name = "PropertyFiles")
 @Data
 @NoArgsConstructor
-public class Property extends AuditingCreateEntity {
+public class PropertyFiles {
     @Id
     @GeneratedValue(generator = UUIDGenerator.GENERATOR_NAME)
     @GenericGenerator(name = UUIDGenerator.GENERATOR_NAME, strategy = "com.cretf.backend.utils.UUIDGenerator")
+    @Column(name = "PropertyFilesId")
+    private String propertyFilesId;
+
     @Column(name = "PropertyId")
     private String propertyId;
-
-    @Column(name = "Code")
-    private String code;
-
-    @Column(name = "Name")
-    private String name;
-
-    @Column(name = "AddressSpecific")
-    private String addressSpecific;
-
-    @Column(name = "BuildIn")
-    private Date buildIn;
-
-    @Column(name = "LocationId")
-    private String locationId;
-
-    @Column(name = "StatusId")
-    @Convert(converter = JsonListConverter.class)
-    private List<String> statusIds;
 
     @Column(name = "FileId")
     @Convert(converter = JsonListConverter.class)
     private List<String> fileIds;
 
-    @Column(name = "PropertyTypeId")
-    private String propertyTypeId;
+    @Column(name = "Category")
+    private String category;
 }

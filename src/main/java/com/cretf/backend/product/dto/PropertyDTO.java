@@ -1,10 +1,14 @@
 package com.cretf.backend.product.dto;
 
+import com.cretf.backend.product.entity.PropertyPriceHistory;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -22,7 +26,9 @@ public class PropertyDTO {
 
     private String locationId;
 
-    private String statusId;
+    private List<String> statusIds;
+
+    private List<String> fileIds;
 
     private String propertyTypeId;
 
@@ -30,7 +36,13 @@ public class PropertyDTO {
 
     private String propertyTypeName;
 
-    //audit
+    private List<AmenityDTO> amenityDTOs;
+
+    private List<PropertyFilesDTO> propertyFilesDTOs;
+
+    private PropertyPriceHistoryDTO propertyPriceNewest;
+    private List<PropertyPriceHistoryDTO> propertyPriceHistoryDTOs;
+    //
     private String creator;
 
     private Date dateCreated;
