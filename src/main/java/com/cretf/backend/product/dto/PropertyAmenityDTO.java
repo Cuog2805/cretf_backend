@@ -16,7 +16,5 @@ public class PropertyAmenityDTO {
 
     public Integer value;
 
-    public String scaleUnit;
-
     public String level;
 }

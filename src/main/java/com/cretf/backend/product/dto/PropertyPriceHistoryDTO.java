@@ -18,6 +18,8 @@ public class PropertyPriceHistoryDTO {
 
     private Double value;
 
+    private String scaleId;
+
     private String scaleUnit;
     //
     private String creator;

@@ -9,3 +9,4 @@ SELECT
 	s.Modifier 						as modifier,
 	s.DateModified  				as dateModified
 FROM Status s
+WHERE s.IsDeleted = 0

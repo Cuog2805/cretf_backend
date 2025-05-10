@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface PropertyService{
     public PropertyDTO create(PropertyDTO propertyDTO) throws Exception;
+    public PropertyDTO update(PropertyDTO propertyDTO) throws Exception;
+    public boolean delete(String propertyId) throws Exception;
     public List<PropertyDTO> createMulti(List<PropertyDTO> propertyDTOS) throws Exception;
     public Page<PropertyDTO> getPropertyBySearch(PropertyDTO propertyDTOS, Pageable pageable) throws Exception;
     public PropertyDTO getOneProperty(PropertyDTO propertyDTO) throws Exception;

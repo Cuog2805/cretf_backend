@@ -5,6 +5,7 @@ import com.cretf.backend.product.dto.PropertyDTO;
 import com.cretf.backend.product.entity.Property;
 import com.cretf.backend.product.service.AmenityService;
 import com.cretf.backend.product.service.PropertyService;
+import com.cretf.backend.utils.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/amenity")
@@ -25,10 +28,17 @@ public class AmenityController {
         this.amenityService = amenityService;
     }
 
-//    @PostMapping("/getAllAmenities")
-//    public Page<AmenityDTO> getAllAmenities(@RequestBody AmenityDTO amenityDTO, @ParameterObject Pageable pageable) throws Exception {
-//        log.debug("Rest request to getAllProperties");
-//        Page<AmenityDTO> result = amenityService.getAmenityBySearch(amenityDTO, pageable);
-//        return result;
-//    }
+    @PostMapping("/getAllAmenities")
+    public Response<List<AmenityDTO>> getAllAmenities(@RequestBody AmenityDTO amenityDTO) throws Exception {
+        log.debug("Rest request to getAllProperties");
+        List<AmenityDTO> result = amenityService.getAllAmenityBySearch(amenityDTO);
+        return Response.ok(result);
+    }
+
+    @PostMapping("/getAllPropertyAmenities")
+    public Response<List<AmenityDTO>> getAllPropertyAmenities(@RequestBody AmenityDTO amenityDTO) throws Exception {
+        log.debug("Rest request to getAllPropertyAmenities");
+        List<AmenityDTO> result = amenityService.getAllPropertyAmenityBySearch(amenityDTO);
+        return Response.ok(result);
+    }
 }

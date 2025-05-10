@@ -46,4 +46,10 @@ public class Property extends AuditingCreateEntity {
 
     @Column(name = "PropertyTypeId")
     private String propertyTypeId;
+
+    @Column(name = "Agent")
+    private String agents;
+
+    @Column(name = "Type")
+    private String type;
 }

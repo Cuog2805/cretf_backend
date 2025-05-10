@@ -1,4 +1,4 @@
-package com.cretf.backend.common.jdbc_service;
+package com.cretf.backend.config;
 
 
 import org.modelmapper.ModelMapper;

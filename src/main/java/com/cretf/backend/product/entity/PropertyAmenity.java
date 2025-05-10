@@ -1,14 +1,11 @@
 package com.cretf.backend.product.entity;
 
 import com.cretf.backend.utils.UUIDGenerator;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
-
+@Entity
 @Data
 @NoArgsConstructor
 @Table(name = "PropertyAmenity")
@@ -27,9 +24,6 @@ public class PropertyAmenity{
 
     @Column(name = "Value")
     private String value;
-
-    @Column(name = "ScaleUnit")
-    private String scaleUnit;
 
     @Column(name = "Level")
     private String level;

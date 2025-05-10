@@ -2,6 +2,7 @@ SELECT
     ranked.PropertyPriceHistoryId as propertyPriceHistoryId,
     ranked.PropertyId as propertyId,
 	ranked.Value as value,
+	sc.ScaleId as scaleId,
 	sc.Unit as scaleUnit,
 	ranked.DateCreated as dateCreated,
 	ranked.Creator as creator,

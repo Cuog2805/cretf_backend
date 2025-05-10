@@ -9,15 +9,16 @@ SELECT
 	a.IsGeneralInfo 							as isGeneralInfo,
 	cs.Name 									as amenityTypeName,
 	pa.Value									as value,
+	sc.ScaleId 									as scaleId,
 	sc.Unit 									as scaleUnit,
 	CASE
 	WHEN cs.Name = N'Phòng' THEN CAST(pa.Value AS nvarchar) + ' ' + a.Name
 	WHEN cs.Name = N'Tiện ích' THEN a.Name
-	WHEN cs.Name = N'Thông tin khác' THEN CAST(pa.Value AS nvarchar) + ' ' + sc.Unit
+	WHEN cs.Name = N'Thông số' THEN CAST(pa.Value AS nvarchar) + ' ' + sc.Unit
 	ELSE ''
 	END as valueDisplay,
 	pa.Level 									as level
 FROM PropertyAmenity pa
 INNER JOIN Amenity a on pa.AmenityId = a.AmenityId
 INNER JOIN CategoryShared cs on cs.CategoryType = 'AMENITY_TYPE' and cs.Code = a.AmenityType
-INNER JOIN Scale sc on pa.ScaleUnit = sc.ScaleId
+INNER JOIN Scale sc on a.ScaleUnit = sc.ScaleId

@@ -13,4 +13,7 @@ import java.util.List;
 public interface PropertyPriceHistoryRepository extends JpaRepository<PropertyPriceHistory, String> {
     @Query("SELECT p FROM PropertyPriceHistory p WHERE p.propertyId IN :propertyIds")
     List<PropertyPriceHistory> findByPropertyIds(@Param("propertyIds") List<String> propertyIds);
+
+    @Query("SELECT p FROM PropertyPriceHistory p WHERE p.propertyId = :propertyId")
+    List<PropertyPriceHistory> findByPropertyId(@Param("propertyId") String propertyId);
 }

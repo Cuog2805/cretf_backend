@@ -39,11 +39,22 @@ public class AmenityServiceImplement extends BaseJdbcServiceImpl<AmenityDTO, Str
     }
 
     @Override
-    public List<AmenityDTO> getAllAmenityBySearch(AmenityDTO amenityDTO) throws Exception {
+    public List<AmenityDTO> getAllPropertyAmenityBySearch(AmenityDTO amenityDTO) throws Exception {
         String sqlSelect = this.getSqlByFileName("getAllPropertyAmenity", FILE_EXTENSION, FILE_PATH_NAME);
         Map<String, String> aliasMap = new HashMap<>();
         aliasMap.put("propertyId", "pa");
         aliasMap.put("isGeneralInfo", "a");
+
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithParams(sqlSelect, amenityDTO, aliasMap);
+
+        List<AmenityDTO> result = (List<AmenityDTO>) this.findAndAliasToBeanResultTransformerList(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, AmenityDTO.class);
+        return result;
+    }
+
+    @Override
+    public List<AmenityDTO> getAllAmenityBySearch(AmenityDTO amenityDTO) throws Exception {
+        String sqlSelect = this.getSqlByFileName("getAllAmenity", FILE_EXTENSION, FILE_PATH_NAME);
+        Map<String, String> aliasMap = new HashMap<>();
 
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithParams(sqlSelect, amenityDTO, aliasMap);
 

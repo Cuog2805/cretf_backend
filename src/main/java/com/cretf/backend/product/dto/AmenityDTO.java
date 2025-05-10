@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,9 +31,21 @@ public class AmenityDTO {
 
     public Integer value;
 
+    public String scaleId;
+
     public String scaleUnit;
 
     public String valueDisplay;
 
     public String level;
+    //
+    private String creator;
+
+    private Date dateCreated;
+
+    private String modifier;
+
+    private Date dateModified;
+
+    private int isDeleted;
 }

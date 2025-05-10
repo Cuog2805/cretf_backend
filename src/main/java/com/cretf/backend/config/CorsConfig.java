@@ -1,4 +1,4 @@
-package com.cretf.backend.common;
+package com.cretf.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
