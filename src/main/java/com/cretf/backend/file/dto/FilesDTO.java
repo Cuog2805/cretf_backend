@@ -1,6 +1,5 @@
-package com.cretf.backend.product.dto;
+package com.cretf.backend.file.dto;
 
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

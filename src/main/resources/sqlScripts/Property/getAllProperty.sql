@@ -22,9 +22,10 @@ SELECT
     p.LocationId            					as locationId,
     p.Creator               					as creator,
     p.DateCreated           					as dateCreated,
-    p.Type										as type
+    p.Type										as type,
+    p.IsDeleted                                 as isDeleted
 FROM Property p
 INNER JOIN PropertyType pt ON p.PropertyTypeId = pt.PropertyTypeId
 INNER JOIN LatestPrices lp ON p.PropertyId = lp.PropertyId AND lp.rn = 1
 INNER JOIN Scale s ON lp.ScaleUnit = s.ScaleId
-WHERE p.IsDeleted = 0
+WHERE (p.IsDeleted = :isDeleted or :isDeleted is null)

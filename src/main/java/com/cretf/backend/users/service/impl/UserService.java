@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -41,9 +43,16 @@ public class UserService implements UserDetailsService {
 
     public List<UsersDTO> getAllUsers() {
         List<Users> users = usersRepository.findAll().stream().toList();
-        List<UsersDTO> usersDTOs = (List<UsersDTO>) users.stream().map(item -> {
-            return modelMapper.map(item, UsersDTO.class);
-        });
+
+        List<UsersDTO> usersDTOs = users.stream().map(item -> {
+            UsersDTO usersDTO = modelMapper.map(item, UsersDTO.class);
+            Optional<UserDetail> userDetail = userDetailRepository.findByUserId(item.getUserId());
+            if(userDetail.isPresent()){
+                UserDetailDTO userDetailDTO = modelMapper.map(userDetail.get(), UserDetailDTO.class);
+                usersDTO.setUserDetailDTO(userDetailDTO);
+            }
+            return usersDTO;
+        }).collect(Collectors.toList());
         return usersDTOs;
     }
 
@@ -136,6 +145,32 @@ public class UserService implements UserDetailsService {
         } else {
             return modelMapper.map(savedUser, UsersDTO.class);
         }
+    }
+
+    public boolean lockUser(String userId) throws Exception {
+        if (!usersRepository.existsById(userId)) {
+            throw new Exception("User not found with id: " + userId);
+        }
+        Optional<Users> users = usersRepository.findById(userId);
+        if(users.isPresent()){
+            Users usersExisting = users.get();
+            usersExisting.setIsDeleted(1);
+            usersRepository.save(usersExisting);
+        }
+        return users.isPresent();
+    }
+
+    public boolean unlockUser(String userId) throws Exception {
+        if (!usersRepository.existsById(userId)) {
+            throw new Exception("User not found with id: " + userId);
+        }
+        Optional<Users> users = usersRepository.findById(userId);
+        if(users.isPresent()){
+            Users usersExisting = users.get();
+            usersExisting.setIsDeleted(0);
+            usersRepository.save(usersExisting);
+        }
+        return users.isPresent();
     }
 
     public void deleteUser(String userId) throws Exception {

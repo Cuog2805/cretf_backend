@@ -1,17 +1,14 @@
-package com.cretf.backend.fileservice;
+package com.cretf.backend.file.fileservice;
 
-import com.cretf.backend.product.dto.FilesDTO;
-import com.cretf.backend.product.entity.Files;
+import com.cretf.backend.file.dto.FilesDTO;
+import com.cretf.backend.file.entity.Files;
 import com.cretf.backend.product.repository.FilesRepository;
 import io.minio.*;
 import io.minio.http.Method;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;

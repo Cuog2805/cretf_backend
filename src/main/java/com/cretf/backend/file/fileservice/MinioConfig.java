@@ -1,4 +1,4 @@
-package com.cretf.backend.fileservice;
+package com.cretf.backend.file.fileservice;
 
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;

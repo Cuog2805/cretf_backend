@@ -1,6 +1,5 @@
-package com.cretf.backend.config;
+package com.cretf.backend.security;
 
-import com.cretf.backend.security.JwtAuthenticationFilter;
 import com.cretf.backend.users.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +30,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/login",
+                                "/auth/admin/login",
                                 "/auth/register",
                                 "/categoryShared/getAllCategoryShared",
                                 //"/categoryShared/getAllCategoryShared",

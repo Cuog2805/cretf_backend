@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -68,5 +69,27 @@ public class PropertyController {
             return Response.ok("Delete succeed!");
         }
         throw new Exception("Delete fail!");
+    }
+
+    @PostMapping("/lockProperty")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> lockProperty(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock lockProperty : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.lock(propertyDTO);
+        if (result) {
+            return Response.ok("Lock succeed!");
+        }
+        throw new Exception("Lock fail!");
+    }
+
+    @PostMapping("/unLockProperty")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> unLockProperty(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock unLockProperty : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.unLock(propertyDTO);
+        if (result) {
+            return Response.ok("Unlock succeed!");
+        }
+        throw new Exception("Unlock fail!");
     }
 }

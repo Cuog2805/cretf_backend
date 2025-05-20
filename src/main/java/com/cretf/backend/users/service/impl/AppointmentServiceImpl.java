@@ -3,9 +3,12 @@ package com.cretf.backend.users.service.impl;
 import ch.qos.logback.core.util.StringUtil;
 import com.cretf.backend.common.jdbc_service.BaseJdbcServiceImpl;
 import com.cretf.backend.product.dto.AmenityDTO;
+import com.cretf.backend.product.repository.StatusRepository;
 import com.cretf.backend.security.SecurityUtils;
 import com.cretf.backend.users.dto.AppointmentDTO;
+import com.cretf.backend.users.dto.DepositContractDTO;
 import com.cretf.backend.users.entity.Appointment;
+import com.cretf.backend.users.entity.DepositContract;
 import com.cretf.backend.users.repository.AppointmentRepository;
 import com.cretf.backend.users.service.AppointmentService;
 import com.cretf.backend.utils.NativeSqlBuilder;
@@ -27,14 +30,18 @@ public class AppointmentServiceImpl extends BaseJdbcServiceImpl<AppointmentDTO, 
     private final String FILE_PATH_NAME = "sqlScripts/Appointment";
 
     private final AppointmentRepository appointmentRepository;
+    private final StatusRepository statusRepository;
     private final ModelMapper modelMapper;
 
     public AppointmentServiceImpl(
             EntityManager entityManager,
-            AppointmentRepository appointmentRepository, ModelMapper modelMapper
+            AppointmentRepository appointmentRepository,
+            StatusRepository statusRepository,
+            ModelMapper modelMapper
     ) {
         super(entityManager, AppointmentDTO.class);
         this.appointmentRepository = appointmentRepository;
+        this.statusRepository = statusRepository;
         this.modelMapper = modelMapper;
     }
 
@@ -62,9 +69,34 @@ public class AppointmentServiceImpl extends BaseJdbcServiceImpl<AppointmentDTO, 
         Optional<Appointment> appointment = appointmentRepository.findById(id);
         if(appointment.isPresent()){
             Appointment appointmentDelete = appointment.get();
-            appointmentDelete.setIsDeleted(1);
+            //appointmentDelete.setIsDeleted(1);
+            appointmentRepository.delete(appointmentDelete);
         }
         return appointment.isPresent();
+    }
+
+    @Override
+    public boolean confirm(AppointmentDTO appointmentDTO) throws Exception {
+        Optional<Appointment> existingAppointment = appointmentRepository.findById(appointmentDTO.getAppointmentId());
+        if(existingAppointment.isPresent()){
+            Appointment appointment = existingAppointment.get();
+            appointment.setStatusId(statusRepository.findByCodeAndType("CONFIRM", "APPOINTMENT_STATUS").get().getStatusId());
+            appointmentRepository.save(appointment);
+            return true;
+        }
+        return existingAppointment.isPresent();
+    }
+
+    @Override
+    public boolean reject(AppointmentDTO appointmentDTO) throws Exception {
+        Optional<Appointment> existingAppointment = appointmentRepository.findById(appointmentDTO.getAppointmentId());
+        if(existingAppointment.isPresent()){
+            Appointment appointment = existingAppointment.get();
+            appointment.setStatusId(statusRepository.findByCodeAndType("REJECT", "APPOINTMENT_STATUS").get().getStatusId());
+            appointmentRepository.save(appointment);
+            return true;
+        }
+        return existingAppointment.isPresent();
     }
 
     @Override

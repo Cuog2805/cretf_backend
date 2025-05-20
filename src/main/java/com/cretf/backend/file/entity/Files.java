@@ -1,4 +1,4 @@
-package com.cretf.backend.product.entity;
+package com.cretf.backend.file.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

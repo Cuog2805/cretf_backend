@@ -17,6 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +37,10 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final ModelMapper modelMapper;
 
-    public UsersDTO login(UsersDTO dto) {
+    public UsersDTO login(UsersDTO dto) throws Exception {
+        if (dto.getIsDeleted() == 1) {
+            throw new Exception("You account is locked!!");
+        }
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
         );
@@ -48,6 +52,28 @@ public class AuthService {
         usersDTO.setToken(token);
 
         return usersDTO;
+    }
+
+    public UsersDTO loginAdmin(UsersDTO request) throws Exception {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
+        Users user = (Users) authentication.getPrincipal();
+
+        // Kiểm tra quyền ADMIN
+        if (!"ADMIN".equals(user.getRoleId())) {
+            throw new Exception("You don't have role to access");
+        }
+
+        String token = jwtUtil.generateToken(user);
+
+        UsersDTO response = modelMapper.map(user, UsersDTO.class);
+        response.setToken(token);
+        return response;
     }
 
 
@@ -76,6 +102,8 @@ public class AuthService {
 
         user.setDateCreated(new Date());
         user.setCreator(dto.getUsername());
+        Status statusUserActive = statusRepository.findByCodeAndType("ACTIVE", "USER_STATUS").orElse(new Status());
+        user.setStatusId(statusUserActive.getStatusId());
         // save user
         Users savedUser = usersRepository.save(user);
 

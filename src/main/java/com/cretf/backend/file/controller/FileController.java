@@ -1,26 +1,13 @@
-package com.cretf.backend.product.controller;
+package com.cretf.backend.file.controller;
 
-import com.cretf.backend.fileservice.FileUploadService;
-import com.cretf.backend.product.dto.FilesDTO;
-import com.google.common.net.HttpHeaders;
-import io.minio.MinioClient;
-import io.minio.RemoveObjectArgs;
-import io.minio.StatObjectResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Encoding;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import com.cretf.backend.file.fileservice.FileUploadService;
+import com.cretf.backend.file.dto.FilesDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
 import java.util.*;
 
 @RestController

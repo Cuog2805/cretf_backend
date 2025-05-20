@@ -19,13 +19,13 @@ public class UserController {
 
     private final UserService userService;
 
-    @GetMapping
+    @GetMapping("/getAllUsers")
     @PreAuthorize("hasRole('ADMIN')")
     public Response<List<UsersDTO>> getAllUsers() {
         return Response.ok(userService.getAllUsers());
     }
 
-    @GetMapping("/{userId}")
+    @GetMapping("/getUserById/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     public Response<UsersDTO> getUserById(@PathVariable String userId) throws Exception {
         return Response.ok(userService.getUserById(userId));
@@ -38,7 +38,27 @@ public class UserController {
         return Response.ok(userService.updateUser(request));
     }
 
-    @DeleteMapping("/{userId}")
+    @PostMapping("/lockUser/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> lockUser(@PathVariable String userId) throws Exception {
+        boolean result = userService.lockUser(userId);
+        if (result) {
+            return Response.ok("Lock succeed!");
+        }
+        throw new Exception("Lock fail!");
+    }
+
+    @PostMapping("/unlockUser/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> unlockUser(@PathVariable String userId) throws Exception {
+        boolean result = userService.unlockUser(userId);
+        if (result) {
+            return Response.ok("Unlock succeed!");
+        }
+        throw new Exception("Unlock fail!");
+    }
+
+    @DeleteMapping("/deleteUser/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public Response<Void> deleteUser(@PathVariable String userId) throws Exception {
         userService.deleteUser(userId);

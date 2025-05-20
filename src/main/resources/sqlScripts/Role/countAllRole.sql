@@ -1,0 +1,3 @@
+SELECT
+	COUNT(r.RoleId)
+FROM Role r

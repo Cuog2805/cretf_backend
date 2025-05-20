@@ -4,6 +4,7 @@ import com.cretf.backend.product.dto.PropertyDTO;
 import com.cretf.backend.product.entity.Property;
 import com.cretf.backend.product.service.PropertyService;
 import com.cretf.backend.users.dto.AppointmentDTO;
+import com.cretf.backend.users.dto.DepositContractDTO;
 import com.cretf.backend.users.service.AppointmentService;
 import com.cretf.backend.utils.Response;
 import org.slf4j.Logger;
@@ -48,12 +49,32 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/deleteAppointment/{id}")
-    public Response<String> deleteAppointment(@PathVariable(value = "id", required = false) String id) throws Exception {
+    public Response<String> deleteAppointment(@PathVariable String id) throws Exception {
         log.debug("REST request to delete Appointment : {}", id);
         boolean result = appointmentService.delete(id);
         if (result) {
             return Response.ok("Delete succeed!");
         }
         throw new Exception("Delete fail!");
+    }
+
+    @PostMapping("/confirmAppointment")
+    public Response<String> confirmAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
+        log.debug("REST request to confirmAppointment : {}", appointmentDTO.getAppointmentId());
+        boolean result = appointmentService.confirm(appointmentDTO);
+        if (result) {
+            return Response.ok("confirm succeed!");
+        }
+        throw new Exception("confirm fail!");
+    }
+
+    @PostMapping("/rejectAppointment")
+    public Response<String> rejectAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
+        log.debug("REST request to rejectAppointment : {}", appointmentDTO.getAppointmentId());
+        boolean result = appointmentService.reject(appointmentDTO);
+        if (result) {
+            return Response.ok("reject succeed!");
+        }
+        throw new Exception("reject fail!");
     }
 }

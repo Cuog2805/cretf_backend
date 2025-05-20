@@ -13,6 +13,8 @@ import org.hibernate.annotations.GenericGenerator;
 @NoArgsConstructor
 public class Role extends AuditingCreateEntity {
     @Id
+    //@GeneratedValue(generator = UUIDGenerator.GENERATOR_NAME)
+    //@GenericGenerator(name = UUIDGenerator.GENERATOR_NAME, strategy = "com.cretf.backend.utils.UUIDGenerator")
     @Column(name = "RoleId")
     private String roleId;
 

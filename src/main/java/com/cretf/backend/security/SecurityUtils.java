@@ -28,5 +28,6 @@ public final class SecurityUtils {
 
         return Optional.empty();
     }
+
 }
 

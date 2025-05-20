@@ -5,14 +5,13 @@ import com.cretf.backend.common.jdbc_service.BaseJdbcServiceImpl;
 import com.cretf.backend.product.dto.*;
 import com.cretf.backend.product.entity.*;
 import com.cretf.backend.product.repository.*;
-import com.cretf.backend.product.service.AmenityService;
-import com.cretf.backend.product.service.PropertyFilesService;
-import com.cretf.backend.product.service.PropertyPriceHistoryService;
-import com.cretf.backend.product.service.PropertyService;
+import com.cretf.backend.product.service.*;
+import com.cretf.backend.security.SecurityUtils;
 import com.cretf.backend.users.dto.DepositDTO;
 import com.cretf.backend.users.entity.Deposit;
 import com.cretf.backend.users.repository.DepositsRepository;
 import com.cretf.backend.users.service.DepositService;
+import com.cretf.backend.users.service.impl.UserService;
 import com.cretf.backend.utils.NativeSqlBuilder;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -46,6 +45,10 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     private final PropertyPriceHistoryService propertyPriceHistoryService;
     private final DepositService depositService;
     private final DepositsRepository depositsRepository;
+    private final UserService userService;
+    private final CoordinatesService coordinatesService;
+    private final CoodinatesRepository coodinatesRepository;
+    private final PublicFacilityService publicFacilityService;
 
     public PropertyServiceImplement(
             EntityManager entityManager,
@@ -57,7 +60,12 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             AmenityService amenityService,
             PropertyFilesService propertyFilesService,
             PropertyPriceHistoryService propertyPriceHistoryService,
-            DepositService depositService, DepositsRepository depositsRepository
+            DepositService depositService,
+            DepositsRepository depositsRepository,
+            UserService userService,
+            CoordinatesService coordinatesService,
+            CoodinatesRepository coodinatesRepository,
+            PublicFacilityService publicFacilityService
     ) {
         super(entityManager, PropertyDTO.class);
         this.modelMapper = modelMapper;
@@ -70,6 +78,10 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         this.propertyPriceHistoryService = propertyPriceHistoryService;
         this.depositService = depositService;
         this.depositsRepository = depositsRepository;
+        this.userService = userService;
+        this.coordinatesService = coordinatesService;
+        this.coodinatesRepository = coodinatesRepository;
+        this.publicFacilityService = publicFacilityService;
     }
 
     private String generatePropertyCode(PropertyDTO propertyDTO) {
@@ -114,6 +126,14 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         property.setDateCreated(new Date());
         property = propertyRepository.save(property);
         String propertyId = property.getPropertyId();
+
+        if(propertyDTO.getCoordinatesDTO() != null){
+            CoordinatesDTO coordinatesDTO = propertyDTO.getCoordinatesDTO();
+            coordinatesDTO.setPropertyId(propertyId);
+
+            Coordinates coordinates = modelMapper.map(coordinatesDTO, Coordinates.class);
+            coodinatesRepository.save(coordinates);
+        }
 
         if(propertyDTO.getDepositDTO() != null){
             DepositDTO depositDTO = propertyDTO.getDepositDTO();
@@ -170,6 +190,8 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         result.setPropertyPriceNewest(propertyPriceHistoryService.findPriceNewestByPropertyIds(
                 Collections.singletonList(propertyId)).stream().findFirst().orElse(null));
 
+        result.setCoordinatesDTO(coordinatesService.findByPropertyId(propertyId));
+
         return result;
     }
 
@@ -181,47 +203,79 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
                 .orElseThrow(() -> new Exception("Property not found with id: " + propertyDTO.getPropertyId()));
 
         String propertyId = existingProperty.getPropertyId();
+        String existingCode = existingProperty.getCode();
 
-        // Update the property entity
         modelMapper.map(propertyDTO, existingProperty);
+
+        existingProperty.setPropertyId(propertyId);
+
+        if (propertyDTO.getCode() == null || propertyDTO.getCode().isEmpty()) {
+            existingProperty.setCode(existingCode);
+        }
+
         existingProperty.setDateModified(new Date());
         existingProperty = propertyRepository.save(existingProperty);
 
-        if(propertyDTO.getDepositDTO() != null){
-            DepositDTO depositDTO = propertyDTO.getDepositDTO();
-            depositDTO.setPropertyId(propertyId);
+        // Cập nhật tọa độ
+        if(propertyDTO.getCoordinatesDTO() != null){
+            Coordinates existingCoordinates = coodinatesRepository.findByPropertyId(propertyId).orElse(new Coordinates());
+            if (existingCoordinates.getPropertyId() == null) {
+                existingCoordinates.setPropertyId(propertyId);
+            }
+            existingCoordinates.setLatitude(propertyDTO.getCoordinatesDTO().getLatitude());
+            existingCoordinates.setLongitude(propertyDTO.getCoordinatesDTO().getLongitude());
 
-            Deposit deposit = modelMapper.map(depositDTO, Deposit.class);
-            depositsRepository.save(deposit);
+            coodinatesRepository.save(existingCoordinates);
         }
 
-        // Update property price if provided
+        // Cập nhật deposit
+        if(propertyDTO.getDepositDTO() != null){
+            Deposit existingDeposit = depositsRepository.findByPropertyId(propertyId);
+            if (existingDeposit == null) {
+                existingDeposit = new Deposit();
+                existingDeposit.setPropertyId(propertyId);
+            }
+
+            DepositDTO depositDTO = propertyDTO.getDepositDTO();
+
+            existingDeposit.setPropertyId(propertyId);
+            existingDeposit.setNote(depositDTO.getNote());
+            existingDeposit.setValue(depositDTO.getValue());
+            existingDeposit.setDueDate(depositDTO.getDueDate());
+            existingDeposit.setScaleUnit(depositDTO.getScaleUnit());
+
+            depositsRepository.save(existingDeposit);
+        }
+
+        // Update property price
         if (propertyDTO.getPropertyPriceNewest() != null) {
             PropertyPriceHistoryDTO priceDTO = propertyDTO.getPropertyPriceNewest();
             priceDTO.setPropertyId(propertyId);
 
             PropertyPriceHistory priceHistory = modelMapper.map(priceDTO, PropertyPriceHistory.class);
+
+            priceHistory.setPropertyPriceHistoryId(null);
             priceHistory.setDateCreated(new Date());
             priceHistory.setCreator(propertyDTO.getCreator());
             propertyPriceHistoryRepository.save(priceHistory);
         }
 
-        // Update amenities if provided
+        // Update amenities
         if (propertyDTO.getAmenityDTOs() != null) {
             try {
                 List<PropertyAmenity> existingAmenities = propertyAmenityRepository.findByPropertyId(propertyId);
 
-                // Then delete them
-                propertyAmenityRepository.deleteAll(existingAmenities);
-                propertyAmenityRepository.flush();
+                if (existingAmenities != null && !existingAmenities.isEmpty()) {
+                    propertyAmenityRepository.deleteAll(existingAmenities);
+                    propertyAmenityRepository.flush();
+                }
 
-                // Add new amenities with new IDs (don't reuse the old ones)
+                // Thêm amenities mới
                 if (!propertyDTO.getAmenityDTOs().isEmpty()) {
                     List<PropertyAmenity> propertyAmenities = propertyDTO.getAmenityDTOs().stream()
                             .map(item -> {
                                 PropertyAmenity amenity = modelMapper.map(item, PropertyAmenity.class);
-                                // Don't set the ID - let it be generated
-                                amenity.setPropertyAmenityId(null); // Ensure we get a new ID
+                                amenity.setPropertyAmenityId(null);
                                 amenity.setPropertyId(propertyId);
                                 return amenity;
                             })
@@ -230,20 +284,21 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
                     propertyAmenityRepository.saveAll(propertyAmenities);
                 }
             } catch (Exception e) {
-                throw e;
+                throw new Exception("Error updating amenities: " + e.getMessage(), e);
             }
         }
 
-        // Update property files if provided using the same pattern
+        // Update property files
         if (propertyDTO.getPropertyFilesDTOs() != null) {
             try {
                 List<PropertyFiles> existingFiles = propertyFilesRepository.findByPropertyId(propertyId);
 
-                // Then delete them
-                propertyFilesRepository.deleteAll(existingFiles);
-                propertyFilesRepository.flush();
+                if (existingFiles != null && !existingFiles.isEmpty()) {
+                    propertyFilesRepository.deleteAll(existingFiles);
+                    propertyFilesRepository.flush();
+                }
 
-                // Add new files
+                // Thêm files mới
                 if (!propertyDTO.getPropertyFilesDTOs().isEmpty()) {
                     List<PropertyFiles> propertyFiles = propertyDTO.getPropertyFilesDTOs().stream()
                             .map(fileDTO -> {
@@ -258,7 +313,7 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
                     propertyFilesRepository.saveAll(propertyFiles);
                 }
             } catch (Exception e) {
-                throw e;
+                throw new Exception("Error updating property files: " + e.getMessage(), e);
             }
         }
 
@@ -273,6 +328,10 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         result.setPropertyPriceNewest(propertyPriceHistoryService.findPriceNewestByPropertyIds(
                 Collections.singletonList(propertyId)).stream().findFirst().orElse(null));
 
+        result.setCoordinatesDTO(coordinatesService.findByPropertyId(propertyId));
+
+        result.setDepositDTO(depositService.getDepositsByPropertyId(propertyId));
+
         return result;
     }
 
@@ -283,6 +342,9 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             // Check if property exists
             Property existingProperty = propertyRepository.findById(propertyId)
                     .orElseThrow(() -> new Exception("Property not found with id: " + propertyId));
+
+            Coordinates existingCoordinates = coodinatesRepository.findByPropertyId(propertyId).orElse(new Coordinates());
+            coodinatesRepository.delete(existingCoordinates);
 
             Deposit existingDeposit = depositsRepository.findByPropertyId(propertyId);
             depositsRepository.delete(existingDeposit);
@@ -341,12 +403,20 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "priceTo", "lp.Value", NativeSqlBuilder.ComparisonType.LESS_THAN_OR_EQUAL);
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "priceNewestScale", "lp.ScaleUnit");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "locationIds", "p.LocationId", NativeSqlBuilder.ComparisonType.IN);
-        NativeSqlBuilder.addColumnInfo(columnInfoMap, "statusIds", "p.StatusId", NativeSqlBuilder.ComparisonType.LIKE);
+        //NativeSqlBuilder.addColumnInfo(columnInfoMap, "statusIds", "p.StatusId", NativeSqlBuilder.ComparisonType.LIKE);
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "creator", "p.Creator");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "propertyTypeId", "pt.PropertyTypeId");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "type", "p.Type");
 
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithColumnInfo(sqlSelect, propertyDTO, columnInfoMap);
+
+        if(!Objects.equals(userService.getUserByUsername(SecurityUtils.getCurrentUserLogin().orElse("")).getRoleId(), "ADMIN")){
+            nativeSqlAfterBuilded.params.put("isDeleted", 0);
+        }
+        else{
+            nativeSqlAfterBuilded.params.put("isDeleted", null);
+        }
+
         List<PropertyDTO> propertyDTOs = (List<PropertyDTO>) this.findAndAliasToBeanResultTransformer(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, pageable, PropertyDTO.class);
 
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, propertyDTO, columnInfoMap);
@@ -390,6 +460,14 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     }
 
     @Override
+    public List<PropertyDTO> getPropertyByLocation(String locationId) throws Exception {
+        String sqlSelect = this.getSqlByFileName("getAllPropertyLocation", FILE_EXTENSION, FILE_PATH_NAME);
+        Map<String, Object> params = new HashMap<>();
+        params.put("locationId", locationId);
+        return (List<PropertyDTO>) this.findAndAliasToBeanResultTransformerList(sqlSelect, params, PropertyDTO.class);
+    }
+
+    @Override
     public PropertyDTO getOneProperty(PropertyDTO propertyDTO) throws Exception {
         Optional<Property> entity = propertyRepository.findById(propertyDTO.getPropertyId());
         if(entity.isPresent()){
@@ -404,10 +482,36 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             result.setPropertyPriceNewest(propertyPriceHistoryService.findPriceNewestByPropertyIds(Collections.singletonList(property.getPropertyId())).getFirst());
             result.setPropertyPriceHistoryDTOs(propertyPriceHistoryService.findByPropertyIds(Collections.singletonList(property.getPropertyId())));
             result.setDepositDTO(depositService.getDepositsByPropertyId(property.getPropertyId()));
+            result.setCoordinatesDTO(coordinatesService.findByPropertyId(property.getPropertyId()));
+            result.setPublicFacilityDTOs(publicFacilityService.findByPropertyId(property.getPropertyId()));
 
             return result;
         }
         throw new Exception("Property not found with ID: " + propertyDTO.getPropertyId());
+    }
+
+    @Override
+    public boolean lock(PropertyDTO propertyDTO) throws Exception {
+        Optional<Property> existingProperty = propertyRepository.findById(propertyDTO.getPropertyId());
+        if(existingProperty.isPresent()){
+            Property property = existingProperty.get();
+            property.setIsDeleted(1);
+            propertyRepository.save(property);
+            return true;
+        }
+        return existingProperty.isPresent();
+    }
+
+    @Override
+    public boolean unLock(PropertyDTO propertyDTO) throws Exception {
+        Optional<Property> existingProperty = propertyRepository.findById(propertyDTO.getPropertyId());
+        if(existingProperty.isPresent()){
+            Property property = existingProperty.get();
+            property.setIsDeleted(0);
+            propertyRepository.save(property);
+            return true;
+        }
+        return existingProperty.isPresent();
     }
 
 }

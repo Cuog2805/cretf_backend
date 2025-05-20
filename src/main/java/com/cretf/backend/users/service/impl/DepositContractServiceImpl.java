@@ -1,26 +1,38 @@
 package com.cretf.backend.users.service.impl;
 
-import com.cretf.backend.fileservice.FileUploadService;
+import com.cretf.backend.common.jdbc_service.BaseJdbcServiceImpl;
+import com.cretf.backend.file.fileservice.FileUploadService;
 import com.cretf.backend.product.dto.PropertyDTO;
-import com.cretf.backend.product.entity.Files;
+import com.cretf.backend.file.entity.Files;
+import com.cretf.backend.product.entity.Property;
 import com.cretf.backend.product.repository.FilesRepository;
+import com.cretf.backend.product.repository.StatusRepository;
 import com.cretf.backend.product.service.PropertyService;
+import com.cretf.backend.product.service.StatusService;
+import com.cretf.backend.users.dto.AppointmentDTO;
 import com.cretf.backend.users.dto.DepositContractDTO;
+import com.cretf.backend.users.dto.DepositDTO;
 import com.cretf.backend.users.dto.UsersDTO;
 import com.cretf.backend.users.entity.DepositContract;
 import com.cretf.backend.users.repository.DepositContractRepository;
 import com.cretf.backend.users.service.DepositService;
 import com.cretf.backend.users.service.DepositContractService;
+import com.cretf.backend.utils.NativeSqlBuilder;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.http.Method;
+import jakarta.persistence.EntityManager;
 import org.apache.poi.xwpf.usermodel.*;
 import org.modelmapper.ModelMapper;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -29,16 +41,17 @@ import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
-public class DepositContractServiceImpl implements DepositContractService {
+public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContractDTO, String> implements DepositContractService {
+    private final String FILE_EXTENSION = "sql";
+    private final String FILE_PATH_NAME = "sqlScripts/Deposit";
+
     private final DepositContractRepository depositContractRepository;
+    private final StatusRepository statusRepository;
     private final FilesRepository filesRepository;
     private final FileUploadService fileUploadService;
     private final DepositService depositService;
@@ -52,7 +65,9 @@ public class DepositContractServiceImpl implements DepositContractService {
 
     @Autowired
     public DepositContractServiceImpl(
+            EntityManager entityManager,
             DepositContractRepository depositContractRepository,
+            StatusRepository statusRepository,
             FilesRepository filesRepository,
             FileUploadService fileUploadService,
             DepositService depositService,
@@ -61,7 +76,9 @@ public class DepositContractServiceImpl implements DepositContractService {
             ModelMapper modelMapper,
             MinioClient minioClient
     ) {
+        super(entityManager, DepositContractDTO.class);
         this.depositContractRepository = depositContractRepository;
+        this.statusRepository = statusRepository;
         this.filesRepository = filesRepository;
         this.fileUploadService = fileUploadService;
         this.depositService = depositService;
@@ -216,7 +233,7 @@ public class DepositContractServiceImpl implements DepositContractService {
                         .bucket(bucket)
                         .object(filePath)
                         .method(Method.GET)
-                        .expiry(24, TimeUnit.HOURS)
+                        .expiry(7, TimeUnit.DAYS)
                         .build()
         );
 
@@ -236,17 +253,71 @@ public class DepositContractServiceImpl implements DepositContractService {
 
         return resultDTO;
     }
+
+    @Override
+    public Page<DepositContractDTO> getDepoistContractBySearch(DepositContractDTO depositContractDTO, Pageable pageable) throws Exception {
+        String sqlSelect = this.getSqlByFileName("getAllDepositContract", FILE_EXTENSION, FILE_PATH_NAME);
+        String sqlCount = this.getSqlByFileName("countAllDepositContract", FILE_EXTENSION, FILE_PATH_NAME);
+        Map<String, NativeSqlBuilder.ColumnInfo> columnInfoMap = NativeSqlBuilder.createColumnInfoMap();
+
+        NativeSqlBuilder.addColumnInfo(columnInfoMap, "statusId", "dc.StatusId", NativeSqlBuilder.ComparisonType.EQUAL);
+        NativeSqlBuilder.addColumnInfo(columnInfoMap, "seller", "dc.Seller", NativeSqlBuilder.ComparisonType.EQUAL);
+        NativeSqlBuilder.addColumnInfo(columnInfoMap, "buyer", "dc.Buyer", NativeSqlBuilder.ComparisonType.EQUAL);
+
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithColumnInfo(sqlSelect, depositContractDTO, columnInfoMap);
+        List<DepositContractDTO> result = (List<DepositContractDTO>) this.findAndAliasToBeanResultTransformer(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, pageable, DepositContractDTO.class);
+
+        result.stream().forEach(item -> {
+            try {
+                item.setDepositDTO(depositService.getDepositsById(item.getDepositId()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, depositContractDTO, columnInfoMap);
+        Long total = this.countByNativeQuery(nativeSqlCount.sql, nativeSqlCount.params);
+
+        return new PageImpl<>(result, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), total);
+    }
+
+    @Override
+    public boolean comfirm(DepositContractDTO depositContractDTO) throws Exception {
+        Optional<DepositContract> existingDepositContract = depositContractRepository.findById(depositContractDTO.getDepositContractId());
+        if(existingDepositContract.isPresent()){
+            DepositContract depositContract = existingDepositContract.get();
+            depositContract.setStatusId(statusRepository.findByCodeAndType("CONFIRM", "DEPOSIT_STATUS").get().getStatusId());
+            depositContractRepository.save(depositContract);
+            return true;
+        }
+        return existingDepositContract.isPresent();
+    }
+
+    @Override
+    public boolean reject(DepositContractDTO depositContractDTO) throws Exception {
+        Optional<DepositContract> existingDepositContract = depositContractRepository.findById(depositContractDTO.getDepositContractId());
+        if(existingDepositContract.isPresent()){
+            DepositContract depositContract = existingDepositContract.get();
+            depositContract.setStatusId(statusRepository.findByCodeAndType("REJECT", "DEPOSIT_STATUS").get().getStatusId());
+            depositContractRepository.save(depositContract);
+            return true;
+        }
+        return existingDepositContract.isPresent();
+    }
+
     @Override
     public List<DepositContractDTO> getAll() throws Exception {
         return depositContractRepository.findAll().stream()
                 .map(item -> {return modelMapper.map(item, DepositContractDTO.class);})
                 .collect(Collectors.toList());
     }
+
     @Override
     public DepositContractDTO getById(String templateId) {
         DepositContract depositContract = depositContractRepository.findById(templateId).orElseThrow(() -> new RuntimeException("Template not found"));
         return modelMapper.map(depositContract, DepositContractDTO.class);
     }
+
     @Override
     public List<DepositContractDTO> search(String keyword) {
         return depositContractRepository.findBySellerNameContainingOrBuyerNameContaining(keyword).stream()
@@ -255,6 +326,7 @@ public class DepositContractServiceImpl implements DepositContractService {
                 })
                 .collect(Collectors.toList());
     }
+
     @Override
     public boolean delete(String templateId) throws Exception {
         Optional<DepositContract> template = depositContractRepository.findById(templateId);

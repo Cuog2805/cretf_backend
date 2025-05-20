@@ -10,6 +10,8 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DepositContractDTO {
+    private String depositContractId;
+
     private String templateId;
 
     private String depositId;
@@ -29,6 +31,8 @@ public class DepositContractDTO {
     private Date dueDate;
 
     private String downloadUrl;
+
+    private String statusId;
 
     private DepositDTO depositDTO;
 }

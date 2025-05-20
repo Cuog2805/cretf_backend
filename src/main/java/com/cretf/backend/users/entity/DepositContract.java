@@ -17,7 +17,7 @@ public class DepositContract {
     @GeneratedValue(generator = UUIDGenerator.GENERATOR_NAME)
     @GenericGenerator(name = UUIDGenerator.GENERATOR_NAME, strategy = "com.cretf.backend.utils.UUIDGenerator")
     @Column(name = "depositContractId")
-    private String DepositContractId;
+    private String depositContractId;
 
     @Column(name = "DepositId")
     private String depositId;
@@ -45,4 +45,7 @@ public class DepositContract {
 
     @Column(name = "DownloadUrl")
     private String downloadUrl;
+
+    @Column(name = "StatusId")
+    private String statusId;
 }

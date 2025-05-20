@@ -61,6 +61,10 @@ public class PropertyDTO {
 
     private DepositDTO depositDTO;
 
+    private CoordinatesDTO coordinatesDTO;
+
+    private List<PublicFacilityDTO> publicFacilityDTOs;
+
     private String type;
     //
     private String creator;
