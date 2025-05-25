@@ -31,4 +31,7 @@ public class Amenity extends AuditingCreateEntity {
 
     @Column(name = "IsGeneralInfo")
     private String isGeneralInfo;
+
+    @Column(name = "Ordinal")
+    private Integer ordinal;
 }

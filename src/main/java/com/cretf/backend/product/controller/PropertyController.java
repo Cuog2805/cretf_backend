@@ -1,8 +1,10 @@
 package com.cretf.backend.product.controller;
 
+import com.cretf.backend.product.dto.PropertyCommentDTO;
 import com.cretf.backend.product.dto.PropertyDTO;
 import com.cretf.backend.product.dto.PropertyTypeDTO;
 import com.cretf.backend.product.entity.Property;
+import com.cretf.backend.product.service.PropertyCommentService;
 import com.cretf.backend.product.service.PropertyService;
 import com.cretf.backend.product.service.PropertyTypeService;
 import com.cretf.backend.utils.Response;
@@ -21,15 +23,27 @@ import java.util.List;
 public class PropertyController {
     private final Logger log = LoggerFactory.getLogger(Property.class);
     private final PropertyService propertyService;
+    private final PropertyCommentService propertyCommentService;
 
-    public PropertyController(PropertyService propertyService) {
+    public PropertyController(
+            PropertyService propertyService,
+            PropertyCommentService propertyCommentService
+    ) {
         this.propertyService = propertyService;
+        this.propertyCommentService = propertyCommentService;
     }
 
     @PostMapping("/getAllProperties")
     public Response<List<PropertyDTO>> getAllProperties(@RequestBody PropertyDTO propertyDTO, @ParameterObject Pageable pageable) throws Exception {
         log.debug("Rest request to getAllProperties");
         Page<PropertyDTO> result = propertyService.getPropertyBySearch(propertyDTO, pageable);
+        return Response.ok(result);
+    }
+
+    @PostMapping("/getFavouriteProperties")
+    public Response<List<PropertyDTO>> getFavouriteProperties(@RequestBody PropertyDTO propertyDTO, @ParameterObject Pageable pageable) throws Exception {
+        log.debug("Rest request to getFavouriteProperties");
+        Page<PropertyDTO> result = propertyService.getPropertyFavourite(propertyDTO, pageable);
         return Response.ok(result);
     }
 
@@ -71,6 +85,37 @@ public class PropertyController {
         throw new Exception("Delete fail!");
     }
 
+    @PostMapping("/addToFavourite")
+    public Response<String> addToFavourite(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock addToFavourite : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.addToFavourite(propertyDTO);
+        if (result) {
+            return Response.ok("Add succeed!");
+        }
+        throw new Exception("Add fail!");
+    }
+
+    @PostMapping("/removeToFavourite")
+    public Response<String> removeToFavourite(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock removeToFavourite : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.removeToFavourite(propertyDTO);
+        if (result) {
+            return Response.ok("Remove succeed!");
+        }
+        throw new Exception("Remove fail!");
+    }
+
+    @PostMapping("/approveProperty")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> approveProperty(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock approveProperty : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.approve(propertyDTO);
+        if (result) {
+            return Response.ok("Approve succeed!");
+        }
+        throw new Exception("Approve fail!");
+    }
+
     @PostMapping("/lockProperty")
     @PreAuthorize("hasRole('ADMIN')")
     public Response<String> lockProperty(@RequestBody PropertyDTO propertyDTO) throws Exception {
@@ -91,5 +136,22 @@ public class PropertyController {
             return Response.ok("Unlock succeed!");
         }
         throw new Exception("Unlock fail!");
+    }
+
+    @PostMapping("/createPropertyComment")
+    public Response<PropertyCommentDTO> createPropertyComment(@RequestBody PropertyCommentDTO propertyCommentDTO) throws Exception {
+        log.debug("Rest request to createPropertyComment: {}", propertyCommentDTO);
+        PropertyCommentDTO result = propertyCommentService.create(propertyCommentDTO);
+        return Response.ok(result);
+    }
+
+    @DeleteMapping("/deletePropertyComment/{id}")
+    public Response<String> deletePropertyComment(@PathVariable(value = "id", required = false) String id) throws Exception {
+        log.debug("REST request to delete deletePropertyComment : {}", id);
+        boolean result = propertyService.delete(id);
+        if (result) {
+            return Response.ok("Delete succeed!");
+        }
+        throw new Exception("Delete fail!");
     }
 }

@@ -18,3 +18,4 @@ SELECT
 FROM Location l
 LEFT JOIN Location ldad on l.ParentCode = ldad.Code
 WHERE l.IsDeleted = 0
+ORDER BY l.ParentCode, l.Name

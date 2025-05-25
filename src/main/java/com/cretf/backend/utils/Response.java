@@ -32,7 +32,7 @@ public class Response<T> {
 
     public static <T> Response<T> error(String errMessage) {
         return Response.<T>builder()
-                .success(true)
+                .success(false)
                 .message(errMessage)
                 .isThrowException(true)
                 .build();

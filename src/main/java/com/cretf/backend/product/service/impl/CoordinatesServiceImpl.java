@@ -11,6 +11,8 @@ import org.checkerframework.checker.units.qual.C;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class CoordinatesServiceImpl extends BaseJdbcServiceImpl<CoordinatesDTO, String> implements CoordinatesService {
     private final String FILE_EXTENSION = "sql";
@@ -27,9 +29,21 @@ public class CoordinatesServiceImpl extends BaseJdbcServiceImpl<CoordinatesDTO, 
         this.modelMapper = modelMapper;
         this.coodinatesRepository = coodinatesRepository;
     }
+
     @Override
     public CoordinatesDTO findByPropertyId(String propertyId){
         Coordinates coordinates = coodinatesRepository.findByPropertyId(propertyId).orElse(new Coordinates());
         return modelMapper.map(coordinates, CoordinatesDTO.class);
+    }
+
+    @Override
+    public List<CoordinatesDTO> findByPropertyIds(List<String> propertyIds){
+        List<Coordinates> coordinates = coodinatesRepository.findByPropertyId(propertyIds);
+
+        List<CoordinatesDTO> coordinatesDTOs = coordinates.stream().map(item -> {
+            return modelMapper.map(item, CoordinatesDTO.class);
+        }).toList();
+
+        return coordinatesDTOs;
     }
 }

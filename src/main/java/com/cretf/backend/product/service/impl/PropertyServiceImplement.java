@@ -13,6 +13,7 @@ import com.cretf.backend.users.repository.DepositsRepository;
 import com.cretf.backend.users.service.DepositService;
 import com.cretf.backend.users.service.impl.UserService;
 import com.cretf.backend.utils.NativeSqlBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
@@ -49,6 +50,12 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     private final CoordinatesService coordinatesService;
     private final CoodinatesRepository coodinatesRepository;
     private final PublicFacilityService publicFacilityService;
+    private final UserFavouriteRepository userFavouriteRepository;
+    private final PropertyCommentService propertyCommentService;
+    private final PropertyCommentRepository propertyCommentRepository;
+    private final ApprovalHistoryService approvalHistoryService;
+    private final ApprovalHistoryRepository approvalHistoryRepository;
+    private final StatusRepository statusRepository;
 
     public PropertyServiceImplement(
             EntityManager entityManager,
@@ -65,7 +72,13 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             UserService userService,
             CoordinatesService coordinatesService,
             CoodinatesRepository coodinatesRepository,
-            PublicFacilityService publicFacilityService
+            PublicFacilityService publicFacilityService,
+            UserFavouriteRepository userFavouriteRepository,
+            PropertyCommentService propertyCommentService,
+            PropertyCommentRepository propertyCommentRepository,
+            ApprovalHistoryService approvalHistoryService,
+            ApprovalHistoryRepository approvalHistoryRepository,
+            StatusRepository statusRepository
     ) {
         super(entityManager, PropertyDTO.class);
         this.modelMapper = modelMapper;
@@ -82,6 +95,12 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         this.coordinatesService = coordinatesService;
         this.coodinatesRepository = coodinatesRepository;
         this.publicFacilityService = publicFacilityService;
+        this.userFavouriteRepository = userFavouriteRepository;
+        this.propertyCommentService = propertyCommentService;
+        this.propertyCommentRepository = propertyCommentRepository;
+        this.approvalHistoryService = approvalHistoryService;
+        this.approvalHistoryRepository = approvalHistoryRepository;
+        this.statusRepository = statusRepository;
     }
 
     private String generatePropertyCode(PropertyDTO propertyDTO) {
@@ -367,6 +386,12 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
                 propertyPriceHistoryRepository.flush();
             }
 
+            List<PropertyComment> propertyComments = propertyCommentRepository.findByPropertyId(propertyId);
+            if (!propertyComments.isEmpty()) {
+                propertyCommentRepository.deleteAll(propertyComments);
+                propertyCommentRepository.flush();
+            }
+
             propertyRepository.delete(existingProperty);
 
             return true;
@@ -403,23 +428,46 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "priceTo", "lp.Value", NativeSqlBuilder.ComparisonType.LESS_THAN_OR_EQUAL);
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "priceNewestScale", "lp.ScaleUnit");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "locationIds", "p.LocationId", NativeSqlBuilder.ComparisonType.IN);
-        //NativeSqlBuilder.addColumnInfo(columnInfoMap, "statusIds", "p.StatusId", NativeSqlBuilder.ComparisonType.LIKE);
+        //NativeSqlBuilder.addColumnInfo(columnInfoMap, "statusIds", "p.StatusId", NativeSqlBuilder.ComparisonType.EQUAL);
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "creator", "p.Creator");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "propertyTypeId", "pt.PropertyTypeId");
         NativeSqlBuilder.addColumnInfo(columnInfoMap, "type", "p.Type");
 
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithColumnInfo(sqlSelect, propertyDTO, columnInfoMap);
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, propertyDTO, columnInfoMap);
 
         if(!Objects.equals(userService.getUserByUsername(SecurityUtils.getCurrentUserLogin().orElse("")).getRoleId(), "ADMIN")){
             nativeSqlAfterBuilded.params.put("isDeleted", 0);
+            nativeSqlCount.params.put("isDeleted", 0);
         }
         else{
             nativeSqlAfterBuilded.params.put("isDeleted", null);
+            nativeSqlCount.params.put("isDeleted", null);
+        }
+
+        if(!StringUtil.isNullOrEmpty(propertyDTO.getUsernameFav())){
+            nativeSqlAfterBuilded.params.put("usernameFav", propertyDTO.getUsernameFav());
+            nativeSqlCount.params.put("usernameFav", propertyDTO.getUsernameFav());
+        }
+        else{
+            nativeSqlAfterBuilded.params.put("usernameFav", null);
+            nativeSqlCount.params.put("usernameFav", null);
+        }
+
+        if(propertyDTO.getStatusIds() != null &&!propertyDTO.getStatusIds().isEmpty()){
+//            nativeSqlAfterBuilded.params.put("statusIds", propertyDTO.getStatusIds());
+//            nativeSqlCount.params.put("statusIds", propertyDTO.getStatusIds());
+            ObjectMapper mapper = new ObjectMapper();
+            String statusIdsJson = mapper.writeValueAsString(propertyDTO.getStatusIds());
+            nativeSqlAfterBuilded.params.put("statusIds", statusIdsJson);
+            nativeSqlCount.params.put("statusIds", statusIdsJson);
+        }
+        else{
+            nativeSqlAfterBuilded.params.put("statusIds", null);
+            nativeSqlCount.params.put("statusIds", null);
         }
 
         List<PropertyDTO> propertyDTOs = (List<PropertyDTO>) this.findAndAliasToBeanResultTransformer(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, pageable, PropertyDTO.class);
-
-        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, propertyDTO, columnInfoMap);
         Long total = this.countByNativeQuery(nativeSqlCount.sql, nativeSqlCount.params);
 
         //Gán phần thông tin chung
@@ -460,6 +508,21 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     }
 
     @Override
+    public Page<PropertyDTO> getPropertyFavourite(PropertyDTO propertyDTO, Pageable pageable) throws Exception {
+        String sqlSelect = this.getSqlByFileName("getAllPropertyFavourite", FILE_EXTENSION, FILE_PATH_NAME);
+        String sqlCount = this.getSqlByFileName("countAllPropertyFavourite", FILE_EXTENSION, FILE_PATH_NAME);
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("username", propertyDTO.getUsernameFav());
+        params.put("username", propertyDTO.getUsernameFav());
+
+        List<PropertyDTO> propertyDTOs = (List<PropertyDTO>) this.findAndAliasToBeanResultTransformer(sqlSelect, params, pageable, PropertyDTO.class);
+        Long total = this.countByNativeQuery(sqlCount, params);
+
+        return new PageImpl<>(propertyDTOs, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), total);
+    }
+
+    @Override
     public List<PropertyDTO> getPropertyByLocation(String locationId) throws Exception {
         String sqlSelect = this.getSqlByFileName("getAllPropertyLocation", FILE_EXTENSION, FILE_PATH_NAME);
         Map<String, Object> params = new HashMap<>();
@@ -484,10 +547,64 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             result.setDepositDTO(depositService.getDepositsByPropertyId(property.getPropertyId()));
             result.setCoordinatesDTO(coordinatesService.findByPropertyId(property.getPropertyId()));
             result.setPublicFacilityDTOs(publicFacilityService.findByPropertyId(property.getPropertyId()));
+            result.setPropertyCommentDTOs(propertyCommentService.getPropertyCommentByPropertyId(property.getPropertyId()));
+            result.setApprovalHistoryDTOs(approvalHistoryService.findByPropertyId(property.getPropertyId()));
 
             return result;
         }
         throw new Exception("Property not found with ID: " + propertyDTO.getPropertyId());
+    }
+
+    @Override
+    @Transactional
+    public boolean approve(PropertyDTO propertyDTO) throws Exception {
+        if (propertyDTO.getPropertyId() == null) {
+            throw new Exception("Property ID cannot be null");
+        }
+
+        Property existingProperty = propertyRepository.findById(propertyDTO.getPropertyId())
+                .orElseThrow(() -> new Exception("Property not found with id: " + propertyDTO.getPropertyId()));
+
+        if (propertyDTO.getApprovalHistoryDTO() != null) {
+            //update property status
+            List<String> propertyStatus = new ArrayList<>();
+            propertyStatus.add(propertyDTO.getApprovalHistoryDTO().getStatusId());
+            existingProperty.setStatusIds(propertyStatus);
+            propertyRepository.save(existingProperty);
+
+            //update ApprovalHistory
+            ApprovalHistory approvalHistory =  modelMapper.map(propertyDTO.getApprovalHistoryDTO(), ApprovalHistory.class);
+            approvalHistory.setPropertyId(existingProperty.getPropertyId());
+            approvalHistory.setApprovalDate(new Date());
+            approvalHistoryRepository.save(approvalHistory);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean addToFavourite(PropertyDTO propertyDTO) throws Exception {
+        if(!StringUtil.isNullOrEmpty(propertyDTO.getPropertyId())){
+            UserFavourite userFavourite = new UserFavourite();
+            userFavourite.setPropertyId(propertyDTO.getPropertyId());
+            userFavourite.setUsername(propertyDTO.getUsernameFav());
+            userFavouriteRepository.save(userFavourite);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean removeToFavourite(PropertyDTO propertyDTO) throws Exception {
+        Optional<UserFavourite> userFavouriteExisting = userFavouriteRepository.findByPropertyIdAndUsername(propertyDTO.getPropertyId(), propertyDTO.getUsernameFav());
+        if(userFavouriteExisting.isPresent()){
+            UserFavourite userFavourite = userFavouriteExisting.get();
+            userFavouriteRepository.delete(userFavourite);
+            return true;
+        }
+        return false;
     }
 
     @Override

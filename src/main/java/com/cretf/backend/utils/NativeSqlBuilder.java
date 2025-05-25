@@ -14,6 +14,7 @@ public class NativeSqlBuilder {
         GREATER_THAN(">"),
         GREATER_THAN_OR_EQUAL(">="),
         IN("IN"),
+        NOT_IN("NOT IN"),
         LIKE("LIKE"),
         NOT_EQUAL("<>");
 

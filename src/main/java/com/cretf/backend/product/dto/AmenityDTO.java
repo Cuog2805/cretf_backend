@@ -13,9 +13,9 @@ import java.util.Date;
 public class AmenityDTO {
     private String amenityId;
 
-    public String propertyAmenityId;
+    private String propertyAmenityId;
 
-    public String propertyId;
+    private String propertyId;
 
     private String code;
 
@@ -29,15 +29,17 @@ public class AmenityDTO {
 
     private Boolean isGeneralInfo;
 
-    public Integer value;
+    private Integer value;
 
-    public String scaleId;
+    private String scaleId;
 
-    public String scaleUnit;
+    private String scaleUnit;
 
-    public String valueDisplay;
+    private String valueDisplay;
 
-    public String level;
+    private String level;
+
+    private Integer ordinal;
     //
     private String creator;
 

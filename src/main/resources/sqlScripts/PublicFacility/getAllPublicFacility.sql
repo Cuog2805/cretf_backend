@@ -9,4 +9,3 @@ SELECT
     pf.IsDeleted AS isDeleted
 FROM
     PublicFacility pf
-WHERE IsDeleted = 0

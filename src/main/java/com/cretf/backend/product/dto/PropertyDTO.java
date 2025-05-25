@@ -59,6 +59,10 @@ public class PropertyDTO {
 
     private List<PropertyPriceHistoryDTO> propertyPriceHistoryDTOs;
 
+    private ApprovalHistoryDTO approvalHistoryDTO;
+
+    private List<ApprovalHistoryDTO> approvalHistoryDTOs;
+
     private DepositDTO depositDTO;
 
     private CoordinatesDTO coordinatesDTO;
@@ -66,6 +70,14 @@ public class PropertyDTO {
     private List<PublicFacilityDTO> publicFacilityDTOs;
 
     private String type;
+
+    private Integer views;
+
+    private String usernameFav;
+
+    private int isInFavourite;
+
+    private List<PropertyCommentDTO> propertyCommentDTOs;
     //
     private String creator;
 

@@ -12,4 +12,7 @@ import java.util.Optional;
 public interface CoodinatesRepository extends JpaRepository<Coordinates, String> {
     @Query("SELECT c FROM Coordinates c WHERE c.propertyId = :propertyId")
     Optional<Coordinates> findByPropertyId(@Param("propertyId") String propertyId);
+
+    @Query("SELECT c FROM Coordinates c WHERE c.propertyId IN :propertyIds")
+    List<Coordinates> findByPropertyId(@Param("propertyIds") List<String> propertyIds);
 }

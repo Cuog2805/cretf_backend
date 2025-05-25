@@ -15,6 +15,7 @@ import com.cretf.backend.product.repository.PublicFacilityRepository;
 import com.cretf.backend.product.service.CoordinatesService;
 import com.cretf.backend.product.service.PropertyService;
 import com.cretf.backend.product.service.PublicFacilityService;
+import com.cretf.backend.security.SecurityUtils;
 import com.cretf.backend.utils.NativeSqlBuilder;
 import jakarta.persistence.EntityManager;
 import org.modelmapper.ModelMapper;
@@ -26,6 +27,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 @Service
 public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilityDTO, String> implements PublicFacilityService {
     private final String FILE_EXTENSION = "sql";
@@ -66,6 +70,16 @@ public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilit
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithColumnInfo(sqlSelect, publicFacilityDTO, columnInfoMap);
         List<PublicFacilityDTO> publicFacilityDTOs = (List<PublicFacilityDTO>) this.findAndAliasToBeanResultTransformer(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, pageable, PublicFacilityDTO.class);
 
+        List<String> publicFacilityIds = publicFacilityDTOs.stream().map(PublicFacilityDTO::getPublicFacilityId).toList();
+        List<CoordinatesDTO> coordinatesDTOs = coordinatesService.findByPropertyIds(publicFacilityIds);
+        Map<String, CoordinatesDTO> publicFacilityCoordinateMap = coordinatesDTOs.stream().collect(Collectors.toMap(
+                CoordinatesDTO::getPropertyId, Function.identity()
+        ));
+
+        publicFacilityDTOs.stream().forEach(item -> {
+            item.setCoordinatesDTO(publicFacilityCoordinateMap.get(item.getPublicFacilityId()));
+        });
+
         NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, publicFacilityDTO, columnInfoMap);
         Long total = this.countByNativeQuery(nativeSqlCount.sql, nativeSqlCount.params);
 
@@ -88,7 +102,7 @@ public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilit
     @Override
     public boolean lock(PublicFacilityDTO publicFacilityDTO) throws Exception {
         Optional<PublicFacility> publicFacility = publicFacilityRepository.findById(publicFacilityDTO.getPublicFacilityId());
-        if(publicFacility.isPresent()){
+        if (publicFacility.isPresent()) {
             PublicFacility publicFacilityExisting = publicFacility.get();
             publicFacilityExisting.setIsDeleted(1);
             publicFacilityRepository.save(publicFacilityExisting);
@@ -100,7 +114,7 @@ public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilit
     @Override
     public boolean unlock(PublicFacilityDTO publicFacilityDTO) throws Exception {
         Optional<PublicFacility> publicFacility = publicFacilityRepository.findById(publicFacilityDTO.getPublicFacilityId());
-        if(publicFacility.isPresent()){
+        if (publicFacility.isPresent()) {
             PublicFacility publicFacilityExisting = publicFacility.get();
             publicFacilityExisting.setIsDeleted(0);
             publicFacilityRepository.save(publicFacilityExisting);
@@ -110,35 +124,67 @@ public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilit
     }
 
     @Override
-    public  PublicFacilityDTO create(PublicFacilityDTO publicFacilityDTO) throws Exception {
-        PublicFacility publicFacility = modelMapper.map(publicFacilityDTO, PublicFacility.class);
-        publicFacility.setDateCreated(new Date());
+    public PublicFacilityDTO create(PublicFacilityDTO publicFacilityDTO) throws Exception {
+        PublicFacility publicFacility;
+        boolean isUpdate = publicFacilityDTO.getPublicFacilityId() != null;
+
+        if (isUpdate) {
+            // Update existing
+            publicFacility = publicFacilityRepository.findById(publicFacilityDTO.getPublicFacilityId())
+                    .orElseThrow(() -> new Exception("PublicFacility not found"));
+            publicFacility.setName(publicFacilityDTO.getName());
+            publicFacility.setLocationId(publicFacilityDTO.getLocationId());
+            publicFacility.setDateModified(new Date());
+            publicFacility.setModifier(SecurityUtils.getCurrentUserLogin().get());
+        } else {
+            // Create new
+            publicFacility = modelMapper.map(publicFacilityDTO, PublicFacility.class);
+            publicFacility.setDateCreated(new Date());
+        }
+
         publicFacilityRepository.save(publicFacility);
         String publicFacilityId = publicFacility.getPublicFacilityId();
 
-        if(publicFacilityDTO.getCoordinatesDTO() != null){
+        // Handle coordinates
+        if (publicFacilityDTO.getCoordinatesDTO() != null) {
             CoordinatesDTO coordinatesDTO = publicFacilityDTO.getCoordinatesDTO();
             coordinatesDTO.setPropertyId(publicFacilityId);
 
-            Coordinates coordinates = modelMapper.map(coordinatesDTO, Coordinates.class);
-            coodinatesRepository.save(coordinates);
+            if (isUpdate) {
+                // Update or create coordinates
+                Optional<Coordinates> existingCoords = coodinatesRepository.findByPropertyId(publicFacilityId);
+                if (existingCoords.isPresent()) {
+                    existingCoords.get().setLatitude(coordinatesDTO.getLatitude());
+                    existingCoords.get().setLongitude(coordinatesDTO.getLongitude());
+                    coodinatesRepository.save(existingCoords.get());
+                } else {
+                    Coordinates coordinates = modelMapper.map(coordinatesDTO, Coordinates.class);
+                    coodinatesRepository.save(coordinates);
+                }
+                List<PropertyNearbyPlace> propertyNearbyPlaceOld = propertyNearbyPlaceRepository.findByPublicFacilityId(publicFacilityId);
+                propertyNearbyPlaceRepository.deleteAll(propertyNearbyPlaceOld);
+            } else {
+                // Create new coordinates
+                Coordinates coordinates = modelMapper.map(coordinatesDTO, Coordinates.class);
+                coodinatesRepository.save(coordinates);
+            }
 
-            //set Distance
+            // Recalculate distances
             List<PropertyDTO> propertyDTOs = propertyService.getPropertyByLocation(publicFacility.getLocationId());
-            propertyDTOs.stream().forEach(item -> {
+            propertyDTOs.forEach(item -> {
                 CoordinatesDTO propertyCoordinatesDTO = coordinatesService.findByPropertyId(item.getPropertyId());
-                PropertyNearbyPlace propertyNearbyPlace = new PropertyNearbyPlace();
-                propertyNearbyPlace.setPropertyId(item.getPropertyId());
-                propertyNearbyPlace.setPublicFacilityId(publicFacility.getPublicFacilityId());
-                propertyNearbyPlace.setDistance(calculateDistance(propertyCoordinatesDTO, publicFacilityDTO.getCoordinatesDTO()));
-
-                propertyNearbyPlaceRepository.save(propertyNearbyPlace);
+                if (propertyCoordinatesDTO != null) {
+                    PropertyNearbyPlace propertyNearbyPlace = new PropertyNearbyPlace();
+                    propertyNearbyPlace.setPropertyId(item.getPropertyId());
+                    propertyNearbyPlace.setPublicFacilityId(publicFacilityId);
+                    propertyNearbyPlace.setDistance(calculateDistance(propertyCoordinatesDTO, coordinatesDTO));
+                    propertyNearbyPlaceRepository.save(propertyNearbyPlace);
+                }
             });
         }
 
         PublicFacilityDTO result = modelMapper.map(publicFacility, PublicFacilityDTO.class);
-
-        result.setCoordinatesDTO(coordinatesService.findByPropertyId(result.getPublicFacilityId()));
+        result.setCoordinatesDTO(coordinatesService.findByPropertyId(publicFacilityId));
 
         return result;
     }
@@ -146,6 +192,11 @@ public class PublicFacilityServiceImpl extends BaseJdbcServiceImpl<PublicFacilit
     private static final double EARTH_RADIUS_M = 6371000.0;
 
     public static double calculateDistance(CoordinatesDTO coordinatesDTO1, CoordinatesDTO coordinatesDTO2) {
+        if (coordinatesDTO1 == null || coordinatesDTO2 == null ||
+                coordinatesDTO1.getLatitude() == null || coordinatesDTO1.getLongitude() == null ||
+                coordinatesDTO2.getLatitude() == null || coordinatesDTO2.getLongitude() == null) {
+            return 0;
+        }
         // Đổi độ sang radian
         double lat1Rad = Math.toRadians(coordinatesDTO1.getLatitude());
         double lon1Rad = Math.toRadians(coordinatesDTO1.getLongitude());
