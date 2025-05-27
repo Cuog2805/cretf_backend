@@ -13,6 +13,6 @@ public interface DepositContractService {
     public List<DepositContractDTO> search(String keyword);
     public boolean delete(String templateId) throws Exception;
     public Page<DepositContractDTO> getDepoistContractBySearch(DepositContractDTO depositContractDTO, Pageable pageable) throws Exception;
-    public boolean comfirm(DepositContractDTO depositContractDTO) throws Exception;
-    public boolean reject(DepositContractDTO depositContractDTO) throws Exception;
+    public boolean approve(DepositContractDTO depositContractDTO) throws Exception;
+    //public boolean reject(DepositContractDTO depositContractDTO) throws Exception;
 }

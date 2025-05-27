@@ -35,6 +35,27 @@ public class DashBoardController {
         return Response.ok(result);
     }
 
+    @PostMapping("/getPropertyTypeStatic")
+    public Response<List<DashBoardDTO>> getPropertyTypeStatic(@RequestBody DashBoardDTO request) throws Exception {
+        log.debug("Rest request to getPropertyTypeStatic");
+        List<DashBoardDTO> result = dashBoardService.getPropertyTypeStatic(request);
+        return Response.ok(result);
+    }
+
+    @PostMapping("/getPriceTrendOverTime")
+    public Response<List<DashBoardDTO>> getPriceTrendOverTime(@RequestBody DashBoardDTO request) throws Exception {
+        log.debug("Rest request to getPriceTrendOverTime");
+        List<DashBoardDTO> result = dashBoardService.getPriceTrendOverTime(request);
+        return Response.ok(result);
+    }
+
+    @PostMapping("/getTopTransactionRegions")
+    public Response<List<DashBoardDTO>> getTopTransactionRegions(@RequestBody DashBoardDTO request) throws Exception {
+        log.debug("Rest request to getTopTransactionRegions");
+        List<DashBoardDTO> result = dashBoardService.getTopTransactionRegions(request);
+        return Response.ok(result);
+    }
+
     @PostMapping("/getSummaryPriceAvarageLocation")
     public Response<List<DashBoardDTO>> getSummaryPriceAvarageLocation(@RequestBody DashBoardDTO request) throws Exception {
         log.debug("Rest request to getSummaryPriceAvarageLocation");

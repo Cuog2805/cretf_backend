@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ApprovalHistoryRepository extends JpaRepository<ApprovalHistory, String> {
-    @Query("SELECT ah FROM ApprovalHistory ah WHERE ah.propertyId = :propertyId ORDER BY ah.approvalDate DESC")
-    List<ApprovalHistory> findByPropertyId(@Param("propertyId") String propertyId);
+    @Query("SELECT ah FROM ApprovalHistory ah WHERE ah.entityTableId = :entityTableId ORDER BY ah.approvalDate DESC")
+    List<ApprovalHistory> findByEntityTableId(@Param("entityTableId") String entityTableId);
+
+    @Query("SELECT ah FROM ApprovalHistory ah WHERE ah.entityTableId IN :entityTableIds ORDER BY ah.approvalDate DESC")
+    List<ApprovalHistory> findByEntityTableIds(@Param("entityTableIds") List<String> entityTableIds);
 }

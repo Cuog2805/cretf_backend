@@ -31,8 +31,8 @@ public class ApprovalHistoryServiceImpl extends BaseJdbcServiceImpl<ApprovalHist
 
 
     @Override
-    public List<ApprovalHistoryDTO> findByPropertyId(String propertyId) throws Exception {
-        List<ApprovalHistory> approvalHistories = approvalHistoryRepository.findByPropertyId(propertyId);
+    public List<ApprovalHistoryDTO> findByEntityTableId(String entityTableId) throws Exception {
+        List<ApprovalHistory> approvalHistories = approvalHistoryRepository.findByEntityTableId(entityTableId);
 
         List<ApprovalHistoryDTO> approvalHistoryDTOs = approvalHistories.stream().map(item -> {
             return modelMapper.map(item, ApprovalHistoryDTO.class);
@@ -42,10 +42,21 @@ public class ApprovalHistoryServiceImpl extends BaseJdbcServiceImpl<ApprovalHist
     }
 
     @Override
-    public List<ApprovalHistoryDTO> findNewestApprovalByPropertyIds(List<String> propertyIds) throws Exception {
+    public List<ApprovalHistoryDTO> findByEntityTableIds(List<String> entityTableIds) throws Exception {
+        List<ApprovalHistory> approvalHistories = approvalHistoryRepository.findByEntityTableIds(entityTableIds);
+
+        List<ApprovalHistoryDTO> approvalHistoryDTOs = approvalHistories.stream().map(item -> {
+            return modelMapper.map(item, ApprovalHistoryDTO.class);
+        }).collect(Collectors.toList());
+
+        return approvalHistoryDTOs;
+    }
+
+    @Override
+    public List<ApprovalHistoryDTO> findNewestApprovalByEntityTableIds(List<String> entityTableIds) throws Exception {
         String sqlSelect = this.getSqlByFileName("getAllApprovalHistoryNewest", FILE_EXTENSION, FILE_PATH_NAME);
         Map<String, Object> params = new HashMap<>();
-        params.put("propertyIds", propertyIds);
+        params.put("entityTableIds", entityTableIds);
 
         List<ApprovalHistoryDTO> approvalHistoryDTOs = (List<ApprovalHistoryDTO>) this.findAndAliasToBeanResultTransformerList(sqlSelect, params, ApprovalHistoryDTO.class);
 

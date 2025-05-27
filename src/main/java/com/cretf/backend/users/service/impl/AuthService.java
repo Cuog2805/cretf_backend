@@ -22,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +41,13 @@ public class AuthService {
 
     public UsersDTO login(UsersDTO dto) throws Exception {
         if (dto.getIsDeleted() == 1) {
+            throw new Exception("You account is not exist!!");
+        }
+        Optional<Status> statusActive = statusRepository.findByCodeAndType("ACTIVE", "USER_STATUS");
+        if (statusActive.isPresent() && (Objects.equals(dto.getStatusId(), statusActive.get().getStatusId()))) {
             throw new Exception("You account is locked!!");
         }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
         );
@@ -134,6 +141,28 @@ public class AuthService {
         } catch (Exception e) {
             throw new Exception("Invalid old password");
         }
+
+        Users user = usersRepository.findByUsername(dto.getUsername())
+                .orElseThrow(() -> new Exception("User not found"));
+
+        String hashedPassword = passwordEncoder.encode(dto.getNewPassword());
+        user.setPassword(hashedPassword);
+
+        user.setDateModified(new Date());
+        user.setModifier(dto.getUsername());
+
+        usersRepository.save(user);
+    }
+
+    public void resetPassword(UsersDTO dto) throws Exception {
+        // Authenticate user
+//        try {
+//            authenticationManager.authenticate(
+//                    new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
+//            );
+//        } catch (Exception e) {
+//            throw new Exception("Invalid old password");
+//        }
 
         Users user = usersRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() -> new Exception("User not found"));

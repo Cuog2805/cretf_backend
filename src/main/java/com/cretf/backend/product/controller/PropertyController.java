@@ -154,4 +154,15 @@ public class PropertyController {
         }
         throw new Exception("Delete fail!");
     }
+
+    @PostMapping("/repostProperty")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> repostProperty(@RequestBody PropertyDTO propertyDTO) throws Exception {
+        log.debug("REST request to lock repostProperty : {}", propertyDTO.getPropertyId());
+        boolean result = propertyService.repost(propertyDTO);
+        if (result) {
+            return Response.ok("repost succeed!");
+        }
+        throw new Exception("repost fail!");
+    }
 }

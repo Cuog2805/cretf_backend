@@ -27,14 +27,15 @@ ChildLocations AS (
 )
 SELECT
     NEWID() as dashBoardId,
-    cl.RootName as name,
-    pt.Name as propertyTypeName,
-    COUNT(*) as propertyCount,
-    COALESCE(CAST(AVG(lp.Value) AS FLOAT), 0.0) as priceAvarage
+    cl.RootName as title,
+    COALESCE(CAST(AVG(lp.Value) AS FLOAT), 0.0) as value,
+    CAST(ROW_NUMBER() OVER (ORDER BY AVG(lp.Value) DESC) AS INT) as sortOrder,
+    CAST(COUNT(*) AS FLOAT) as count,
+    pt.Name as category
 FROM Property p
 INNER JOIN ChildLocations cl ON p.LocationId = cl.ChildLocationId
 INNER JOIN PropertyType pt ON p.PropertyTypeId = pt.PropertyTypeId
 INNER JOIN LatestPrices lp ON p.PropertyId = lp.PropertyId AND lp.rn = 1
 WHERE p.IsDeleted = 0 AND p.Type = :propertyType
 GROUP BY cl.RootLocationId, cl.RootCode, cl.RootName, pt.Name
-ORDER BY cl.RootCode, pt.Name
+ORDER BY sortOrder

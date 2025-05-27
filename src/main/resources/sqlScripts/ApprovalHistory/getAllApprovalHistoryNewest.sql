@@ -1,12 +1,13 @@
 SELECT
     ranked.ApprovalId as approvalId,
-    ranked.PropertyId as propertyId,
+    ranked.EntityTableId as entityTableId,
 	ranked.Approver as approver,
-	ranked.ApprovalDate as approvalDate
+	ranked.ApprovalDate as approvalDate,
+	ranked.TableName as tableName
 FROM (
     SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY PropertyId ORDER BY ApprovalDate DESC) AS rank
+           ROW_NUMBER() OVER (PARTITION BY EntityTableId ORDER BY ApprovalDate DESC) AS rank
     FROM ApprovalHistory ah
-    WHERE PropertyId IN (:propertyIds)
+    WHERE EntityTableId IN (:entityTableIds)
 ) AS ranked
-WHERE rank = 1;
+WHERE rank = 1

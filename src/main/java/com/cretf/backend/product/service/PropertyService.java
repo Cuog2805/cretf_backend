@@ -16,6 +16,7 @@ public interface PropertyService{
     public List<PropertyDTO> getPropertyByLocation(String locationId) throws Exception;
     public PropertyDTO getOneProperty(PropertyDTO propertyDTO) throws Exception;
     public boolean approve(PropertyDTO propertyDTO) throws Exception;
+    public boolean repost(PropertyDTO propertyDTO) throws Exception;
     public boolean addToFavourite(PropertyDTO propertyDTO) throws Exception;
     public boolean removeToFavourite(PropertyDTO propertyDTO) throws Exception;
     public boolean lock(PropertyDTO propertyDTO) throws Exception;

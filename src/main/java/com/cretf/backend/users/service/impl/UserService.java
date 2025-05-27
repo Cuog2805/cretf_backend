@@ -1,6 +1,8 @@
 package com.cretf.backend.users.service.impl;
 
 import ch.qos.logback.core.util.StringUtil;
+import com.cretf.backend.product.entity.Status;
+import com.cretf.backend.product.repository.StatusRepository;
 import com.cretf.backend.users.dto.UserDetailDTO;
 import com.cretf.backend.users.dto.UsersDTO;
 import com.cretf.backend.users.entity.UserDetail;
@@ -9,6 +11,10 @@ import com.cretf.backend.users.repository.UserDetailRepository;
 import com.cretf.backend.users.repository.UsersRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -24,15 +30,18 @@ public class UserService implements UserDetailsService {
     private final UsersRepository usersRepository;
     private final UserDetailRepository userDetailRepository;
     private final ModelMapper modelMapper;
+    private final StatusRepository statusRepository;
 
     public UserService(
             UsersRepository usersRepository,
             UserDetailRepository userDetailRepository,
-            ModelMapper modelMapper
+            ModelMapper modelMapper,
+            StatusRepository statusRepository
     ) {
         this.usersRepository = usersRepository;
         this.userDetailRepository = userDetailRepository;
         this.modelMapper = modelMapper;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -41,19 +50,27 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    public List<UsersDTO> getAllUsers() {
-        List<Users> users = usersRepository.findAll().stream().toList();
+    public Page<UsersDTO> getAllUsers(UsersDTO usersDTO, Pageable pageable) {
+        String username = usersDTO.getUsername() != null ? usersDTO.getUsername().toLowerCase() : "";
+
+        List<Users> users = usersRepository.findAll().stream()
+                .filter(item -> {
+                    return item.getUsername().toLowerCase().contains(username);
+                })
+                .toList();
 
         List<UsersDTO> usersDTOs = users.stream().map(item -> {
-            UsersDTO usersDTO = modelMapper.map(item, UsersDTO.class);
+            UsersDTO usersDTO1 = modelMapper.map(item, UsersDTO.class);
             Optional<UserDetail> userDetail = userDetailRepository.findByUserId(item.getUserId());
-            if(userDetail.isPresent()){
+            if (userDetail.isPresent()) {
                 UserDetailDTO userDetailDTO = modelMapper.map(userDetail.get(), UserDetailDTO.class);
-                usersDTO.setUserDetailDTO(userDetailDTO);
+                usersDTO1.setUserDetailDTO(userDetailDTO);
             }
-            return usersDTO;
+            return usersDTO1;
         }).collect(Collectors.toList());
-        return usersDTOs;
+        Long total = usersDTOs.stream().count();
+
+        return new PageImpl<>(usersDTOs, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), total);
     }
 
     public UsersDTO getUserById(String userId) throws Exception {
@@ -152,10 +169,15 @@ public class UserService implements UserDetailsService {
             throw new Exception("User not found with id: " + userId);
         }
         Optional<Users> users = usersRepository.findById(userId);
-        if(users.isPresent()){
+        if (users.isPresent()) {
             Users usersExisting = users.get();
-            usersExisting.setIsDeleted(1);
-            usersRepository.save(usersExisting);
+            Optional<Status> statusBanned = statusRepository.findByCodeAndType("BANNED", "USER_STATUS");
+            if (statusBanned.isPresent()) {
+                usersExisting.setStatusId(statusBanned.get().getStatusId());
+                usersRepository.save(usersExisting);
+            } else {
+                throw new Exception("Status banned found");
+            }
         }
         return users.isPresent();
     }
@@ -165,18 +187,42 @@ public class UserService implements UserDetailsService {
             throw new Exception("User not found with id: " + userId);
         }
         Optional<Users> users = usersRepository.findById(userId);
-        if(users.isPresent()){
+        if (users.isPresent()) {
             Users usersExisting = users.get();
-            usersExisting.setIsDeleted(0);
+            Optional<Status> statusActive = statusRepository.findByCodeAndType("ACTIVE", "USER_STATUS");
+            if (statusActive.isPresent()) {
+                usersExisting.setStatusId(statusActive.get().getStatusId());
+                usersRepository.save(usersExisting);
+            } else {
+                throw new Exception("Status active found");
+            }
+        }
+        return users.isPresent();
+    }
+
+    public boolean deleteUser(String userId) throws Exception {
+        if (!usersRepository.existsById(userId)) {
+            throw new Exception("User not found with id: " + userId);
+        }
+        Optional<Users> users = usersRepository.findById(userId);
+        if (users.isPresent()) {
+            Users usersExisting = users.get();
+            usersExisting.setIsDeleted(1);
             usersRepository.save(usersExisting);
         }
         return users.isPresent();
     }
 
-    public void deleteUser(String userId) throws Exception {
+    public boolean restoreUser(String userId) throws Exception {
         if (!usersRepository.existsById(userId)) {
             throw new Exception("User not found with id: " + userId);
         }
-        usersRepository.deleteById(userId);
+        Optional<Users> users = usersRepository.findById(userId);
+        if (users.isPresent()) {
+            Users usersExisting = users.get();
+            usersExisting.setIsDeleted(0);
+            usersRepository.save(usersExisting);
+        }
+        return users.isPresent();
     }
 }

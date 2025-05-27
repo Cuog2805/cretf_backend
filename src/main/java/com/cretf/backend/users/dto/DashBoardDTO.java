@@ -12,29 +12,25 @@ public class DashBoardDTO {
 
     private String type;
 
-    private String priceRangeCode;
+    private String title;
 
-    private String priceRange;
+    private String category;
 
-    private Integer priceRangeCount;
+    private Integer sortOrder;
 
-    private Double priceRangePie;
+    private Double value;
 
-    private String name;
+    private String scaleUnit;
 
-    private String depositContractDate;
+    private Double avgValue;
 
-    private Integer depositContractCount;
+    private Double totalValue;
 
-    private String propertyTypeName;
+    private Double count;
 
-    private Integer propertyCount;
+    private Double percentage;
 
-    private Double priceAvarage;
+    private Double minValue;
 
-    private Integer totalViews;
-
-    private Double totalDepositContractValue;
-
-    private Integer totalPropertyActive;
+    private Double maxValue;
 }

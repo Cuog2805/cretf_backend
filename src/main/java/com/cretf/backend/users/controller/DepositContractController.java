@@ -78,23 +78,23 @@ public class DepositContractController {
         return Response.ok(result);
     }
 
-    @PostMapping("/confirmDepositContract")
-    public Response<String> confirmDepositContract(@RequestBody DepositContractDTO depositContractDTO) throws Exception {
-        log.debug("REST request to confirmProperty : {}", depositContractDTO.getDepositContractId());
-        boolean result = depositContractService.comfirm(depositContractDTO);
+    @PostMapping("/approveDepositContract")
+    public Response<String> approveDepositContract(@RequestBody DepositContractDTO depositContractDTO) throws Exception {
+        log.debug("REST request to approveDepositContract : {}", depositContractDTO.getDepositContractId());
+        boolean result = depositContractService.approve(depositContractDTO);
         if (result) {
-            return Response.ok("confirm succeed!");
+            return Response.ok("approve succeed!");
         }
-        throw new Exception("confirm fail!");
+        throw new Exception("approve fail!");
     }
 
-    @PostMapping("/rejectDepositContract")
-    public Response<String> rejectDepositContract(@RequestBody DepositContractDTO depositContractDTO) throws Exception {
-        log.debug("REST request to rejectDepositContract : {}", depositContractDTO.getPropertyId());
-        boolean result = depositContractService.reject(depositContractDTO);
-        if (result) {
-            return Response.ok("reject succeed!");
-        }
-        throw new Exception("reject fail!");
-    }
+//    @PostMapping("/rejectDepositContract")
+//    public Response<String> rejectDepositContract(@RequestBody DepositContractDTO depositContractDTO) throws Exception {
+//        log.debug("REST request to rejectDepositContract : {}", depositContractDTO.getPropertyId());
+//        boolean result = depositContractService.reject(depositContractDTO);
+//        if (result) {
+//            return Response.ok("reject succeed!");
+//        }
+//        throw new Exception("reject fail!");
+//    }
 }

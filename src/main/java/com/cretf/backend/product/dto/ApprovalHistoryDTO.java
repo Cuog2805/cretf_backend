@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 public class ApprovalHistoryDTO {
     private String approvalId;
 
-    private String propertyId;
+    private String entityTableId;
+
+    private String tableName;
 
     private String statusId;
 

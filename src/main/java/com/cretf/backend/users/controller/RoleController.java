@@ -36,25 +36,25 @@ public class RoleController {
         return Response.ok(result);
     }
 
-    @PostMapping("/lockRole/{id}")
+    @PostMapping("/deleteRole/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Response<String> lockRole(@PathVariable String id) throws Exception {
+    public Response<String> deleteRole(@PathVariable String id) throws Exception {
 
-        boolean result = roleService.lock(id);
+        boolean result = roleService.delete(id);
         if (result) {
-            return Response.ok("Lock succeed!");
+            return Response.ok("delete succeed!");
         }
-        throw new Exception("Lock fail!");
+        throw new Exception("delete fail!");
     }
 
-    @PostMapping("/unlockRole/{id}")
+    @PostMapping("/restoreRole/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Response<String> unlockRole(@PathVariable String id) throws Exception {
-        boolean result = roleService.unlock(id);
+    public Response<String> restoreRole(@PathVariable String id) throws Exception {
+        boolean result = roleService.restore(id);
         if (result) {
-            return Response.ok("Unlock succeed!");
+            return Response.ok("restore succeed!");
         }
-        throw new Exception("Unlock fail!");
+        throw new Exception("restore fail!");
     }
 
     @PostMapping("/createRole")

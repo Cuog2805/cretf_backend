@@ -54,5 +54,11 @@ public class AuthController {
         authService.changePassword(request);
         return Response.ok("Change password succeed");
     }
+
+    @PostMapping("/reset-password")
+    public Response<String> resetPassword(@RequestBody UsersDTO request) throws Exception {
+        authService.resetPassword(request);
+        return Response.ok("Reset password succeed");
+    }
 }
 

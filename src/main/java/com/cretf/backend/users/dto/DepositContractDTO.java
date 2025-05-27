@@ -1,10 +1,13 @@
 package com.cretf.backend.users.dto;
 
+import com.cretf.backend.product.dto.ApprovalHistoryDTO;
+import com.cretf.backend.product.entity.ApprovalHistory;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -35,4 +38,8 @@ public class DepositContractDTO {
     private String statusId;
 
     private DepositDTO depositDTO;
+
+    private ApprovalHistoryDTO approvalHistoryDTO;
+
+    private List<ApprovalHistoryDTO> ApprovalHistoryDTOs;
 }

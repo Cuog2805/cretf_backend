@@ -1,41 +1,63 @@
-WITH
-PropertyViewsStats AS (
-    SELECT SUM(p.Views) AS totalViews
+WITH PropertyViewsStats AS (
+    SELECT SUM(COALESCE(p.Views, 0)) AS totalViews
     FROM Property p
     WHERE p.IsDeleted = 0 AND p.Type = :propertyType
-),
-LatestPrices AS (
-    SELECT
-        PropertyId,
-        Value,
-        ScaleUnit,
-        DateCreated,
-        ROW_NUMBER() OVER (PARTITION BY PropertyId ORDER BY DateCreated DESC) as rn
-    FROM PropertyPriceHistory
-    WHERE IsDeleted = 0
 ),
 CompletedContractsStats AS (
     SELECT
         COUNT(*) AS depositContractCount,
-        COALESCE(CAST(SUM(lp.Value) AS FLOAT), 0) AS totalDepositContractValue
+        COALESCE(CAST(SUM(d.Value) AS FLOAT), 0) AS totalDepositContractValue
     FROM DepositContract dc
-    INNER JOIN Status s on dc.StatusId = s.StatusId
-    INNER JOIN Deposit d on dc.DepositId = d.DepositId
-    INNER JOIN Property p on dc.PropertyId = p.PropertyId
-    INNER JOIN LatestPrices lp on p.PropertyId = lp.PropertyId
-    WHERE s.Code = 'CONFIRMED' AND p.Type = :propertyType
+    INNER JOIN Deposit d ON dc.DepositId = d.DepositId
+    INNER JOIN Property p ON dc.PropertyId = p.PropertyId
+    WHERE p.Type = :propertyType
 ),
 PropertiesActiveStats AS (
     SELECT COUNT(*) AS totalPropertyActive
     FROM Property p
-    INNER JOIN Status s on s.StatusId = s.StatusId
-    WHERE s.Code = 'FORSOLD' and p.Type = :propertyType
+    WHERE p.Type = :propertyType
+      AND p.IsDeleted = 0
+      AND EXISTS (
+          SELECT 1
+          FROM OPENJSON(p.StatusId) json_status
+          INNER JOIN Status s ON s.StatusId = json_status.value
+          WHERE s.Code = 'FORSOLD'
+      )
+),
+TotalPropertiesStats AS (
+    SELECT COUNT(*) AS totalProperties
+    FROM Property p
+    WHERE p.IsDeleted = 0 AND p.Type = :propertyType
 )
 SELECT
-    pvs.totalViews as totalViews,
-    ccs.depositContractCount as depositContractCount,
-    ccs.totalDepositContractValue as totalDepositContractValue,
-    pas.totalPropertyActive as totalPropertyActive
-FROM PropertyViewsStats pvs
-CROSS JOIN CompletedContractsStats ccs
-CROSS JOIN PropertiesActiveStats pas
+    NEWID() as dashBoardId,
+    N'Tổng số bất động sản' as title,
+    CAST(COALESCE(tps.totalProperties, 0) AS float) as value,
+    1 as sortOrder
+FROM TotalPropertiesStats tps
+UNION ALL
+--SELECT
+--    N'Tổng lượt xem' as title, COALESCE(pvs.totalViews, 0) as value, 2 as sortOrder
+--FROM PropertyViewsStats pvs
+--UNION ALL
+SELECT
+    NEWID() as dashBoardId,
+    N'Số lượng giao dịch' as title,
+    CAST(COALESCE(ccs.depositContractCount, 0) AS float) as value,
+    3 as sortOrder
+FROM CompletedContractsStats ccs
+--UNION ALL
+--SELECT
+--    NEWID() as dashBoardId,
+--    N'Khối lượng đang giao dịch' as title,
+--    COALESCE(ccs.totalDepositContractValue, 0) as value,
+--    4 as sortOrder
+--FROM CompletedContractsStats ccs
+--UNION ALL
+--SELECT
+--	NEWID() as dashBoardId,
+--    N'Số lượng đang chào bán' as title,
+--    CAST(COALESCE(pas.totalPropertyActive, 0) AS float) as value,
+--    5 as sortOrder
+--FROM PropertiesActiveStats pas
+ORDER BY sortOrder

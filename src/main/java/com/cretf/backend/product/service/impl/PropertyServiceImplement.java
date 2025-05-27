@@ -368,6 +368,12 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             Deposit existingDeposit = depositsRepository.findByPropertyId(propertyId);
             depositsRepository.delete(existingDeposit);
 
+            List<ApprovalHistory> existingApprovalHistory = approvalHistoryRepository.findByEntityTableId(propertyId);
+            if (!existingApprovalHistory.isEmpty()) {
+                approvalHistoryRepository.deleteAll(existingApprovalHistory);
+                approvalHistoryRepository.flush();
+            }
+
             List<PropertyAmenity> existingAmenities = propertyAmenityRepository.findByPropertyId(propertyId);
             if (!existingAmenities.isEmpty()) {
                 propertyAmenityRepository.deleteAll(existingAmenities);
@@ -548,7 +554,7 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             result.setCoordinatesDTO(coordinatesService.findByPropertyId(property.getPropertyId()));
             result.setPublicFacilityDTOs(publicFacilityService.findByPropertyId(property.getPropertyId()));
             result.setPropertyCommentDTOs(propertyCommentService.getPropertyCommentByPropertyId(property.getPropertyId()));
-            result.setApprovalHistoryDTOs(approvalHistoryService.findByPropertyId(property.getPropertyId()));
+            result.setApprovalHistoryDTOs(approvalHistoryService.findByEntityTableId(property.getPropertyId()));
 
             return result;
         }
@@ -556,7 +562,6 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     }
 
     @Override
-    @Transactional
     public boolean approve(PropertyDTO propertyDTO) throws Exception {
         if (propertyDTO.getPropertyId() == null) {
             throw new Exception("Property ID cannot be null");
@@ -574,10 +579,27 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
 
             //update ApprovalHistory
             ApprovalHistory approvalHistory =  modelMapper.map(propertyDTO.getApprovalHistoryDTO(), ApprovalHistory.class);
-            approvalHistory.setPropertyId(existingProperty.getPropertyId());
+            approvalHistory.setEntityTableId(existingProperty.getPropertyId());
+            approvalHistory.setTableName("PROPERTY");
             approvalHistory.setApprovalDate(new Date());
             approvalHistoryRepository.save(approvalHistory);
 
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean repost(PropertyDTO propertyDTO) throws Exception {
+        Property existingProperty = propertyRepository.findById(propertyDTO.getPropertyId())
+                .orElseThrow(() -> new Exception("Property not found with id: " + propertyDTO.getPropertyId()));
+
+        String propertyId = existingProperty.getPropertyId();
+
+        if(!propertyDTO.getStatusIds().isEmpty()){
+            existingProperty.setStatusIds(propertyDTO.getStatusIds());
+            propertyRepository.save(existingProperty);
             return true;
         }
 

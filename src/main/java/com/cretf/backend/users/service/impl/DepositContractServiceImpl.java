@@ -4,7 +4,9 @@ import com.cretf.backend.common.jdbc_service.BaseJdbcServiceImpl;
 import com.cretf.backend.file.fileservice.FileUploadService;
 import com.cretf.backend.product.dto.PropertyDTO;
 import com.cretf.backend.file.entity.Files;
+import com.cretf.backend.product.entity.ApprovalHistory;
 import com.cretf.backend.product.entity.Property;
+import com.cretf.backend.product.repository.ApprovalHistoryRepository;
 import com.cretf.backend.product.repository.FilesRepository;
 import com.cretf.backend.product.repository.StatusRepository;
 import com.cretf.backend.product.service.PropertyService;
@@ -59,6 +61,7 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
     private final UserService userService;
     private final ModelMapper modelMapper;
     private final MinioClient minioClient;
+    private final ApprovalHistoryRepository approvalHistoryRepository;
 
     @Value("${minio.bucket}")
     private String bucket;
@@ -74,7 +77,7 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
             PropertyService propertyService,
             UserService userService,
             ModelMapper modelMapper,
-            MinioClient minioClient
+            MinioClient minioClient, ApprovalHistoryRepository approvalHistoryRepository
     ) {
         super(entityManager, DepositContractDTO.class);
         this.depositContractRepository = depositContractRepository;
@@ -86,6 +89,7 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
         this.userService = userService;
         this.modelMapper = modelMapper;
         this.minioClient = minioClient;
+        this.approvalHistoryRepository = approvalHistoryRepository;
     }
     @Override
     public DepositContractDTO create(DepositContractDTO request) throws Exception {
@@ -282,28 +286,36 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
     }
 
     @Override
-    public boolean comfirm(DepositContractDTO depositContractDTO) throws Exception {
+    public boolean approve(DepositContractDTO depositContractDTO) throws Exception {
         Optional<DepositContract> existingDepositContract = depositContractRepository.findById(depositContractDTO.getDepositContractId());
         if(existingDepositContract.isPresent()){
             DepositContract depositContract = existingDepositContract.get();
-            depositContract.setStatusId(statusRepository.findByCodeAndType("CONFIRM", "DEPOSIT_STATUS").get().getStatusId());
+            depositContract.setStatusId(depositContractDTO.getApprovalHistoryDTO().getStatusId());
             depositContractRepository.save(depositContract);
+
+            //update ApprovalHistory
+            ApprovalHistory approvalHistory =  modelMapper.map(depositContractDTO.getApprovalHistoryDTO(), ApprovalHistory.class);
+            approvalHistory.setEntityTableId(depositContract.getDepositContractId());
+            approvalHistory.setTableName("DEPOSIT_CONTRACT");
+            approvalHistory.setApprovalDate(new Date());
+            approvalHistoryRepository.save(approvalHistory);
+
             return true;
         }
         return existingDepositContract.isPresent();
     }
 
-    @Override
-    public boolean reject(DepositContractDTO depositContractDTO) throws Exception {
-        Optional<DepositContract> existingDepositContract = depositContractRepository.findById(depositContractDTO.getDepositContractId());
-        if(existingDepositContract.isPresent()){
-            DepositContract depositContract = existingDepositContract.get();
-            depositContract.setStatusId(statusRepository.findByCodeAndType("REJECT", "DEPOSIT_STATUS").get().getStatusId());
-            depositContractRepository.save(depositContract);
-            return true;
-        }
-        return existingDepositContract.isPresent();
-    }
+//    @Override
+//    public boolean reject(DepositContractDTO depositContractDTO) throws Exception {
+//        Optional<DepositContract> existingDepositContract = depositContractRepository.findById(depositContractDTO.getDepositContractId());
+//        if(existingDepositContract.isPresent()){
+//            DepositContract depositContract = existingDepositContract.get();
+//            depositContract.setStatusId(statusRepository.findByCodeAndType("REJECT", "DEPOSIT_STATUS").get().getStatusId());
+//            depositContractRepository.save(depositContract);
+//            return true;
+//        }
+//        return existingDepositContract.isPresent();
+//    }
 
     @Override
     public List<DepositContractDTO> getAll() throws Exception {

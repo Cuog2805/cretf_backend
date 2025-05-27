@@ -6,6 +6,8 @@ import com.cretf.backend.users.service.impl.UserService;
 import com.cretf.backend.utils.Response;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +21,10 @@ public class UserController {
 
     private final UserService userService;
 
-    @GetMapping("/getAllUsers")
+    @PostMapping("/getAllUsers")
     @PreAuthorize("hasRole('ADMIN')")
-    public Response<List<UsersDTO>> getAllUsers() {
-        return Response.ok(userService.getAllUsers());
+    public Response<List<UsersDTO>> getAllUsers(@RequestBody UsersDTO usersDTO, @ParameterObject Pageable pageable) {
+        return Response.ok(userService.getAllUsers(usersDTO, pageable));
     }
 
     @GetMapping("/getUserById/{userId}")
@@ -60,9 +62,22 @@ public class UserController {
 
     @DeleteMapping("/deleteUser/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Response<Void> deleteUser(@PathVariable String userId) throws Exception {
-        userService.deleteUser(userId);
-        return Response.ok();
+    public Response<String> deleteUser(@PathVariable String userId) throws Exception {
+        boolean result = userService.deleteUser(userId);
+        if (result) {
+            return Response.ok("Delete succeed!");
+        }
+        throw new Exception("Delete fail!");
+    }
+
+    @DeleteMapping("/restoreUser/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Response<String> restoreUser(@PathVariable String userId) throws Exception {
+        boolean result = userService.restoreUser(userId);
+        if (result) {
+            return Response.ok("Restore succeed!");
+        }
+        throw new Exception("Restore fail!");
     }
 
     @GetMapping("/me")

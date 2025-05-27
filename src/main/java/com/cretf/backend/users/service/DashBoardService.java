@@ -9,4 +9,7 @@ public interface DashBoardService {
     public List<DashBoardDTO> getSummaryTransaction(DashBoardDTO dashBoardDTO) throws Exception;
     public List<DashBoardDTO> getSummaryPriceAvarageLocation(DashBoardDTO dashBoardDTO) throws Exception;
     public List<DashBoardDTO> getSummaryTotalStat(DashBoardDTO dashBoardDTO) throws Exception;
+    public List<DashBoardDTO> getTopTransactionRegions(DashBoardDTO dashBoardDTO) throws Exception;
+    public List<DashBoardDTO> getPriceTrendOverTime(DashBoardDTO dashBoardDTO) throws Exception;
+    public List<DashBoardDTO> getPropertyTypeStatic(DashBoardDTO dashBoardDTO) throws Exception;
 }

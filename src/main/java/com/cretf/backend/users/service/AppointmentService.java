@@ -11,6 +11,6 @@ public interface AppointmentService {
     AppointmentDTO update(AppointmentDTO appointmentDTO) throws Exception;
     boolean delete(String id) throws Exception;
     Page<AppointmentDTO> getAppointmentBySearch(AppointmentDTO appointmentDTO, Pageable pageable) throws Exception;
-    public boolean confirm(AppointmentDTO appointmentDTO) throws Exception;
-    public boolean reject(AppointmentDTO appointmentDTO) throws Exception;
+    public boolean approve(AppointmentDTO appointmentDTO) throws Exception;
+    //public boolean reject(AppointmentDTO appointmentDTO) throws Exception;
 }

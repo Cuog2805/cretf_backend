@@ -1,11 +1,13 @@
 package com.cretf.backend.users.dto;
 
+import com.cretf.backend.product.dto.ApprovalHistoryDTO;
 import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -36,6 +38,10 @@ public class AppointmentDTO {
     private String statusId;
 
     private String note;
+
+    private ApprovalHistoryDTO approvalHistoryDTO;
+
+    private List<ApprovalHistoryDTO> approvalHistoryDTOs;
     //
     private String creator;
 

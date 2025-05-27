@@ -21,8 +21,11 @@ public class ApprovalHistory {
     @Column(name = "ApprovalId")
     private String approvalId;
 
-    @Column(name = "PropertyId")
-    private String propertyId;
+    @Column(name = "EntityTableId")
+    private String entityTableId;
+
+    @Column(name = "TableName")
+    private String tableName;
 
     @Column(name = "StatusId")
     private String statusId;

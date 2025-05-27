@@ -41,12 +41,12 @@ public class AppointmentController {
         return Response.ok(result);
     }
 
-    @PostMapping("/updateAppointment")
-    public Response<AppointmentDTO> updateAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
-        log.debug("Rest request to createAppointment: {}", appointmentDTO);
-        AppointmentDTO result = appointmentService.create(appointmentDTO);
-        return Response.ok(result);
-    }
+//    @PostMapping("/updateAppointment")
+//    public Response<AppointmentDTO> updateAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
+//        log.debug("Rest request to createAppointment: {}", appointmentDTO);
+//        AppointmentDTO result = appointmentService.create(appointmentDTO);
+//        return Response.ok(result);
+//    }
 
     @DeleteMapping("/deleteAppointment/{id}")
     public Response<String> deleteAppointment(@PathVariable String id) throws Exception {
@@ -58,23 +58,23 @@ public class AppointmentController {
         throw new Exception("Delete fail!");
     }
 
-    @PostMapping("/confirmAppointment")
-    public Response<String> confirmAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
-        log.debug("REST request to confirmAppointment : {}", appointmentDTO.getAppointmentId());
-        boolean result = appointmentService.confirm(appointmentDTO);
+    @PostMapping("/approveAppointment")
+    public Response<String> approveAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
+        log.debug("REST request to approveAppointment : {}", appointmentDTO.getAppointmentId());
+        boolean result = appointmentService.approve(appointmentDTO);
         if (result) {
-            return Response.ok("confirm succeed!");
+            return Response.ok("approve succeed!");
         }
-        throw new Exception("confirm fail!");
+        throw new Exception("approve fail!");
     }
 
-    @PostMapping("/rejectAppointment")
-    public Response<String> rejectAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
-        log.debug("REST request to rejectAppointment : {}", appointmentDTO.getAppointmentId());
-        boolean result = appointmentService.reject(appointmentDTO);
-        if (result) {
-            return Response.ok("reject succeed!");
-        }
-        throw new Exception("reject fail!");
-    }
+//    @PostMapping("/rejectAppointment")
+//    public Response<String> rejectAppointment(@RequestBody AppointmentDTO appointmentDTO) throws Exception {
+//        log.debug("REST request to rejectAppointment : {}", appointmentDTO.getAppointmentId());
+//        boolean result = appointmentService.reject(appointmentDTO);
+//        if (result) {
+//            return Response.ok("reject succeed!");
+//        }
+//        throw new Exception("reject fail!");
+//    }
 }

@@ -48,19 +48,20 @@ public class RoleSericeImpl extends BaseJdbcServiceImpl<RoleDTO, String> impleme
         String sqlSelect = this.getSqlByFileName("getAllRole", FILE_EXTENSION, FILE_PATH_NAME);
         String sqlCount = this.getSqlByFileName("countAllRole", FILE_EXTENSION, FILE_PATH_NAME);
         //param
-        Map<String, String> aliasMap = new HashMap<>();
-        //aliasMap.put("propertyId", "pa");
-        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithParams(sqlSelect, roleDTO, aliasMap);
+        Map<String, NativeSqlBuilder.ColumnInfo> columnInfoMap = NativeSqlBuilder.createColumnInfoMap();
+        NativeSqlBuilder.addColumnInfo(columnInfoMap, "name", "r.Name", NativeSqlBuilder.ComparisonType.LIKE);
+
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlAfterBuilded = NativeSqlBuilder.buildSqlWithColumnInfo(sqlSelect, roleDTO, columnInfoMap);
         List<RoleDTO> statusDTOs = (List<RoleDTO>) this.findAndAliasToBeanResultTransformer(nativeSqlAfterBuilded.sql, nativeSqlAfterBuilded.params, pageable, RoleDTO.class);
 
-        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithParams(sqlCount, roleDTO, aliasMap);
+        NativeSqlBuilder.NativeSqlAfterBuilded nativeSqlCount = NativeSqlBuilder.buildSqlWithColumnInfo(sqlCount, roleDTO, columnInfoMap);
         Long total = this.countByNativeQuery(nativeSqlCount.sql, nativeSqlCount.params);
 
         return new PageImpl<>(statusDTOs, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), total);
     }
 
     @Override
-    public boolean lock(String id) throws Exception {
+    public boolean delete(String id) throws Exception {
         List<Users> usersList = usersRepository.findByRoleId(id);
         if(!usersList.isEmpty()){
             throw new Exception("Role is in used");
@@ -76,7 +77,7 @@ public class RoleSericeImpl extends BaseJdbcServiceImpl<RoleDTO, String> impleme
     }
 
     @Override
-    public boolean unlock(String id) throws Exception {
+    public boolean restore(String id) throws Exception {
         Optional<Role> existing = roleRepository.findById(id);
         if(existing.isPresent()){
             Role role = existing.get();
@@ -102,6 +103,8 @@ public class RoleSericeImpl extends BaseJdbcServiceImpl<RoleDTO, String> impleme
     public RoleDTO update(RoleDTO roleDTO) throws Exception {
         Role existing = roleRepository.findById(roleDTO.getRoleId()).orElseThrow(() -> new RuntimeException("Role not found with " + roleDTO.getRoleId()));
         Role role = modelMapper.map(roleDTO, Role.class);
+        role.setCreator(existing.getCreator());
+        role.setDateCreated(existing.getDateCreated());
         role.setDateModified(new Date());
         role.setModifier(SecurityUtils.getCurrentUserLogin().orElse(null));
         role = roleRepository.save(role);
