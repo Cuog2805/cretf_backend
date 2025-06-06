@@ -6,8 +6,10 @@ import com.cretf.backend.product.dto.PropertyDTO;
 import com.cretf.backend.file.entity.Files;
 import com.cretf.backend.product.entity.ApprovalHistory;
 import com.cretf.backend.product.entity.Property;
+import com.cretf.backend.product.entity.Status;
 import com.cretf.backend.product.repository.ApprovalHistoryRepository;
 import com.cretf.backend.product.repository.FilesRepository;
+import com.cretf.backend.product.repository.PropertyRepository;
 import com.cretf.backend.product.repository.StatusRepository;
 import com.cretf.backend.product.service.PropertyService;
 import com.cretf.backend.product.service.StatusService;
@@ -58,6 +60,7 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
     private final FileUploadService fileUploadService;
     private final DepositService depositService;
     private final PropertyService propertyService;
+    private final PropertyRepository propertyRepository;
     private final UserService userService;
     private final ModelMapper modelMapper;
     private final MinioClient minioClient;
@@ -75,9 +78,11 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
             FileUploadService fileUploadService,
             DepositService depositService,
             PropertyService propertyService,
+            PropertyRepository propertyRepository,
             UserService userService,
             ModelMapper modelMapper,
-            MinioClient minioClient, ApprovalHistoryRepository approvalHistoryRepository
+            MinioClient minioClient,
+            ApprovalHistoryRepository approvalHistoryRepository
     ) {
         super(entityManager, DepositContractDTO.class);
         this.depositContractRepository = depositContractRepository;
@@ -86,6 +91,7 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
         this.fileUploadService = fileUploadService;
         this.depositService = depositService;
         this.propertyService = propertyService;
+        this.propertyRepository = propertyRepository;
         this.userService = userService;
         this.modelMapper = modelMapper;
         this.minioClient = minioClient;
@@ -292,6 +298,28 @@ public class DepositContractServiceImpl extends BaseJdbcServiceImpl<DepositContr
             DepositContract depositContract = existingDepositContract.get();
             depositContract.setStatusId(depositContractDTO.getApprovalHistoryDTO().getStatusId());
             depositContractRepository.save(depositContract);
+
+            Optional<Property> propertyApproveOpt = propertyRepository.findById(depositContractDTO.getPropertyId());
+            if (propertyApproveOpt.isPresent()) {
+                Property propertyApprove = propertyApproveOpt.get();
+                String propertyType = propertyApprove.getType();
+
+                String statusType = null;
+                if ("RENT".equals(propertyType)) {
+                    statusType = "PROPERTY_RENT_STATUS";
+                } else if ("SOLD".equals(propertyType)) {
+                    statusType = "PROPERTY_SOLD_STATUS";
+                }
+
+                if (statusType == null) {
+                    throw new Exception("Unsupported property type: " + propertyType);
+                }
+
+                Status status = statusRepository.findByCodeAndType("DEPOSITED", statusType)
+                        .orElseThrow(() -> new Exception("Status not found!"));
+
+                propertyApprove.setStatusIds(Collections.singletonList(String.valueOf(status.getStatusId())));
+            }
 
             //update ApprovalHistory
             ApprovalHistory approvalHistory =  modelMapper.map(depositContractDTO.getApprovalHistoryDTO(), ApprovalHistory.class);

@@ -50,12 +50,14 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
     private final CoordinatesService coordinatesService;
     private final CoodinatesRepository coodinatesRepository;
     private final PublicFacilityService publicFacilityService;
+    private final PublicFacilityRepository publicFacilityRepository;
     private final UserFavouriteRepository userFavouriteRepository;
     private final PropertyCommentService propertyCommentService;
     private final PropertyCommentRepository propertyCommentRepository;
     private final ApprovalHistoryService approvalHistoryService;
     private final ApprovalHistoryRepository approvalHistoryRepository;
     private final StatusRepository statusRepository;
+    private final PropertyNearbyPlaceRepository propertyNearbyPlaceRepository;
 
     public PropertyServiceImplement(
             EntityManager entityManager,
@@ -72,13 +74,13 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             UserService userService,
             CoordinatesService coordinatesService,
             CoodinatesRepository coodinatesRepository,
-            PublicFacilityService publicFacilityService,
+            PublicFacilityService publicFacilityService, PublicFacilityRepository publicFacilityRepository,
             UserFavouriteRepository userFavouriteRepository,
             PropertyCommentService propertyCommentService,
             PropertyCommentRepository propertyCommentRepository,
             ApprovalHistoryService approvalHistoryService,
             ApprovalHistoryRepository approvalHistoryRepository,
-            StatusRepository statusRepository
+            StatusRepository statusRepository, PropertyNearbyPlaceRepository propertyNearbyPlaceRepository
     ) {
         super(entityManager, PropertyDTO.class);
         this.modelMapper = modelMapper;
@@ -95,12 +97,14 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         this.coordinatesService = coordinatesService;
         this.coodinatesRepository = coodinatesRepository;
         this.publicFacilityService = publicFacilityService;
+        this.publicFacilityRepository = publicFacilityRepository;
         this.userFavouriteRepository = userFavouriteRepository;
         this.propertyCommentService = propertyCommentService;
         this.propertyCommentRepository = propertyCommentRepository;
         this.approvalHistoryService = approvalHistoryService;
         this.approvalHistoryRepository = approvalHistoryRepository;
         this.statusRepository = statusRepository;
+        this.propertyNearbyPlaceRepository = propertyNearbyPlaceRepository;
     }
 
     private String generatePropertyCode(PropertyDTO propertyDTO) {
@@ -198,6 +202,19 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
             propertyFilesRepository.saveAll(propertyFiles);
         }
 
+        List<PublicFacility> publicFacilities = publicFacilityRepository.findByLocationId(propertyDTO.getLocationId());
+        Property finalProperty = property;
+        publicFacilities.forEach(item -> {
+            CoordinatesDTO publicFacilitieCoordinatesDTO = coordinatesService.findByPropertyId(item.getPublicFacilityId());
+            if (publicFacilitieCoordinatesDTO != null) {
+                PropertyNearbyPlace propertyNearbyPlace = new PropertyNearbyPlace();
+                propertyNearbyPlace.setPropertyId(finalProperty.getPropertyId());
+                propertyNearbyPlace.setPublicFacilityId(item.getPublicFacilityId());
+                propertyNearbyPlace.setDistance(calculateDistance(publicFacilitieCoordinatesDTO, propertyDTO.getCoordinatesDTO()));
+                propertyNearbyPlaceRepository.save(propertyNearbyPlace);
+            }
+        });
+
         PropertyDTO result = modelMapper.map(property, PropertyDTO.class);
 
         AmenityDTO amenityDTO = new AmenityDTO();
@@ -212,6 +229,33 @@ public class PropertyServiceImplement extends BaseJdbcServiceImpl<PropertyDTO, S
         result.setCoordinatesDTO(coordinatesService.findByPropertyId(propertyId));
 
         return result;
+    }
+
+    private static final double EARTH_RADIUS_M = 6371000.0;
+
+    public static double calculateDistance(CoordinatesDTO coordinatesDTO1, CoordinatesDTO coordinatesDTO2) {
+        if (coordinatesDTO1 == null || coordinatesDTO2 == null ||
+                coordinatesDTO1.getLatitude() == null || coordinatesDTO1.getLongitude() == null ||
+                coordinatesDTO2.getLatitude() == null || coordinatesDTO2.getLongitude() == null) {
+            return 0;
+        }
+        // Đổi độ sang radian
+        double lat1Rad = Math.toRadians(coordinatesDTO1.getLatitude());
+        double lon1Rad = Math.toRadians(coordinatesDTO1.getLongitude());
+        double lat2Rad = Math.toRadians(coordinatesDTO2.getLatitude());
+        double lon2Rad = Math.toRadians(coordinatesDTO2.getLongitude());
+
+        double deltaLat = lat2Rad - lat1Rad;
+        double deltaLon = lon2Rad - lon1Rad;
+
+        // Công thức Haversine
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(lat1Rad) * Math.cos(lat2Rad)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return EARTH_RADIUS_M * c;
     }
 
     @Override
